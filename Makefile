@@ -9,7 +9,7 @@ patch-linux:
 
 build-linux:
 	docker run -it -v "$(PWD)/linux":/linux-volume --rm linuxbuild:latest	\
-		bash -c "make -C /linux-volume"
+		bash -c "make -j8 -C /linux-volume"
 
 run-hello:
 	make -C hello
