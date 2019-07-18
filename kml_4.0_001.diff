@@ -1,0 +1,5501 @@
+diff --git a/CREDITS b/CREDITS
+index 96935df..f6a1c03 100644
+--- a/CREDITS
++++ b/CREDITS
+@@ -2280,6 +2280,10 @@ S: PO BOX 220, HFX. CENTRAL
+ S: Halifax, Nova Scotia
+ S: Canada B3J 3C8
+ 
++N: Toshiyuki Maeda
++E: tosh@is.s.u-tokyo.ac.jp
++D: Kernel Mode Linux
++
+ N: Kai Mäkisara
+ E: Kai.Makisara@kolumbus.fi
+ D: SCSI Tape Driver
+diff --git a/Documentation/00-INDEX b/Documentation/00-INDEX
+index cd077ca..7bd8c5c 100644
+--- a/Documentation/00-INDEX
++++ b/Documentation/00-INDEX
+@@ -267,6 +267,8 @@ kmemcheck.txt
+ 	- info on dynamic checker that detects uses of uninitialized memory.
+ kmemleak.txt
+ 	- info on how to make use of the kernel memory leak detection system
++kml.txt
++	- info on Kernel Mode Linux.
+ ko_KR/
+ 	- directory with Korean translations of various documents
+ kobject.txt
+diff --git a/Documentation/kml.txt b/Documentation/kml.txt
+new file mode 100644
+index 0000000..dab3958
+--- /dev/null
++++ b/Documentation/kml.txt
+@@ -0,0 +1,170 @@
++Kernel Mode Linux (http://web.yl.is.s.u-tokyo.ac.jp/~tosh/kml)
++Copyright 2004,2005 Toshiyuki Maeda
++
++
++Introduction:
++
++Kernel Mode Linux is a technology which enables us to execute user programs
++in kernel mode. In Kernel Mode Linux, user programs can be executed as
++user processes that have the privilege level of kernel mode. The benefit
++of executing user programs in kernel mode is that the user programs can
++access kernel address space directly.  For example, user programs can invoke
++system calls very fast because it is unnecessary to switch between a kernel
++mode and user-mode by using costly software interruptions or context
++switches. In addition, user programs are executed as ordinary processes
++(except for their privilege level, of course), so scheduling and paging are
++performed as usual, unlike kernel modules.
++
++Although it seems dangerous to let user programs access a kernel directly,
++safety of the kernel can be ensured by several means: static type checking
++technology, proof-carrying code technology, software fault isolation, and
++so forth. For proof of concept, we are developing a system which is based
++on the combination of Kernel Mode Linux and Typed Assembly Language, TAL.
++(TAL can ensure safety of programs through its type checking and the type
++checking can be done at machine binary level. For more information about
++TAL, see http://www.cs.cornell.edu/talc)
++
++Currently, IA-32 and AMD64 architecture are supported.
++
++
++Limitation:
++User processes executed in kernel mode should obey the following limitations.
++Otherwise, your system will be in an undefined state. In the worst-case
++scenario, your system will crash.
++
++- On IA-32, user processes executed in kernel mode should not modify their
++  CS, DS, FS and SS register.
++
++- On AMD64, user processes executed in kernel mode should not modify their
++  GS register.
++
++In addition, on AMD64, IA-32 binaries cannot be executed in kernel mode.
++
++
++Instruction:
++
++To enable Kernel Mode Linux, say Y in Kernel Mode Linux field of kernel
++configuration, build and install the kernel, and reboot your machine. Then,
++all executables under the "/trusted" directory are executed in kernel mode
++in the current Kernel Mode Linux implementation. For example, to execute a
++program named "cat" in kernel mode, copy the program to "/trusted" and
++execute it as follows:
++
++% /trusted/cat
++
++
++Implementation Notes for IA-32:
++
++To execute user programs in kernel mode, Kernel Mode Linux has a special
++start_thread (start_kernel_thread) routine, which is called in processing
++execve(2) and sets registers of a user process to specified initial values.
++The original start_thread routine sets CS segment register to __USER_CS.
++The start_kernel_thread routine sets the CS register to __KERNEL_CS. Thus,
++a user program is started as a user process executed in kernel mode.
++
++The biggest problem of implementing Kernel Mode Linux is a stack starvation
++problem. Let's assume that a user program is executed in kernel mode and
++it causes a page fault on its user stack. To generate a page fault exception,
++an IA-32 CPU tries to push several registers (EIP, CS, and so on) to the same
++user stack because the program is executed in kernel mode and the IA-32
++CPU doesn't switch its stack to a kernel stack. Therefore, the IA-32 CPU
++cannot push the registers and generate a double fault exception and fail
++again. Finally, the IA-32 CPU gives up and reset itself. This is the stack
++starvation problem. 
++
++To solve the stack starvation problem, we use the IA-32 hardware task mechanism
++to handle exceptions. By using the mechanism, IA-32 CPU doesn't push the
++registers to its stack. Instead, the CPU switches an execution context to
++another special context. Therefore, the stack starvation problem doesn't occur.
++However, it is costly to handle all exceptions by the IA-32 task mechanism.
++So, in current Kernel Mode Linux implementation, double fault exceptions are
++handled by the IA-32 task. A page fault on a memory stack is not so often, so
++the cost of the IA-32 task mechanism is negligible for usual programs.
++In addition, non-maskable interrupts are also handled by the IA-32 task.
++The reason is described later in this document.
++
++The second problem is a manual stack switching problem. In the original Linux
++kernel, an IA-32 CPU switches a stack from a user stack to a kernel stack on
++exceptions or interrupts. However, in Kernel Mode Linux, a user program
++may be executed in kernel mode and the CPU may not switch a stack.
++Therefore, in current Kernel Mode Linux implementation, the kernel switches
++a stack manually on exceptions and interrupts. To switch a stack, a kernel
++need to know a location of a kernel stack in an address space. However, on
++exceptions and interrupts, the kernel cannot use general registers (EAX, EBX,
++and so on). Therefore, it is very difficult to get the location of the kernel stack.
++
++To solve the above problem, the current Kernel Mode Linux implementation
++exploits a per CPU GDT. In Kernel Mode Linux, one segment descriptor of
++the per CPU GDT entries directly points to the location of the per-CPU TSS
++(Task State Segment). Thus, by using the segment descriptor, the address
++of the kernel stack can be available with only one general register.
++
++The third problem is an interrupt-lost problem on double fault exceptions.
++Let's assume that a user program is executed in kernel mode, and its ESP
++register points to a portion of memory space that has not been mapped to
++its address space yet. What will happen if an external interrupt is raised
++just in time? First, a CPU acks the request for the interrupt from an
++external interrupt controller. Then, the CPU tries to interrupt its execution
++of the user program. However, it can't because there is no stack to save
++the part of the execution context (see above "a stack starvation problem").
++Then, the CPU tries to generate a double fault exception and it succeeds
++because the Kernel Mode Linux implementation handles the double fault by the
++IA-32 task. The problem is that the double fault exception handler knows only
++the suspended user program and it cannot know the request for the interrupt
++because the CPU doesn't tell nothing about it. Therefore, the double fault
++handler directly resumes the user program and doesn't handle the interrupt,
++that is, the same kind of interrupts never be generated because the interrupt
++controller thinks that the previous interrupt has not been serviced by the CPU.
++
++To solve the interrupt-lost problem, the current Kernel Mode Linux implementation
++asks the interrupt controller for untreated interrupts and handles them at the
++end of the double fault exception handler. Asking the interrupt controller is a
++costly operation. However, the cost is negligible because double fault exceptions
++that is, page faults on memory stacks are not so often.
++
++The reason for handling non-maskable interrupts by the IA-32 tasks is closely
++related to the manual stack switching problem and the interrupt-lost problem.
++If an non-maskable interrupt occurs between when a maskable interrupt occurs and
++when a memory stack is switched from a user stack to a kernel stack, and the
++non-maskable interrupt causes a page fault on the memory stack, then the double
++fault exception handler handles the maskable interrupt because it has not been
++handled. The problem is that the double fault handler returns to the suspended
++interrupt handling routine and the routine tries to handle the already-handled
++maskable interrupt again.
++
++The above problem can be avoided by handling non-maskable interrupts with the
++IA-32 tasks, because no double fault exceptions are generated. Usually, non-maskable
++interrupts are very rare, so the cost of the IA-32 task mechanisms doesn't really
++matter. However, if an NMI watchdog is enabled for debugging purpose, performance
++degradation may be observed.
++
++One problem for handling non-maskable interrupts by the IA-32 task mechanism is
++a descriptor-tables inconsistency problem. When the IA-32 tasks are switched
++back and forth, all segment registers (CS, DS, ES, SS, FS, GS) and the local
++descriptor table register (LDTR) are reloaded (unlike the usual IA-32 trap/interrupt
++mechanism). Therefore, to switch the IA-32 task, the global descriptor table
++and the local descriptor table should be consistent, otherwise, the invalid TSS
++exception is raised and it is too complex to recover from the exception.
++The problem is that the consistency cannot be guaranteed because non-maskable
++interrupts are raised anytime and anywhere, that is, when updating the global
++descriptor table or the local descriptor table.
++
++To solve the above problem, the current Kernel Mode Linux implementation inserts
++instructions for saving and restoring FS, GS, and/or LDTR around the portion
++that manipulate the descriptor tables, if needed (CS, DS, ES are used exclusively
++by the kernel at that point, so there are no problems). Then, the non-maskable
++interrupt handler checks whether if FS, GS, and LDTR can be reloaded without problems,
++at the end of itself. If a problem is found, it reloads FS, GS, and/or LDTR with '0'
++(reloading FS, GS, and/or LDTR with '0' always succeeds). The reason why the above
++solution works is as follows. First, if a problem is found at reloading FS, GS,
++and/or LDTR, that means that a non-maskable interrupt occurs when modifying the
++descriptor tables. However, FS, GS, and/or LDTR are properly reloaded after the
++modification by the above mentioned instructions for restoring them. Therefore,
++just reloading FS, GS, and/or LDTR with '0' works because they will be reloaded
++soon after. Inserting the instructions may affect performance. Fortunately, however,
++FS, GS, and/or LDTR are usually reloaded after modifying the descriptor tables,
++so there are little points at that the instructions should be inserted.
++
++
++Implementation Notes for AMD64:
++(Now writing...)
+diff --git a/MAINTAINERS b/MAINTAINERS
+index efbcb50..7e35a3b 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -5560,6 +5560,12 @@ L:	kernel-janitors@vger.kernel.org
+ W:	http://kernelnewbies.org/KernelJanitors
+ S:	Odd Fixes
+ 
++KERNEL MODE LINUX
++P:	Toshiyuki Maeda
++M:	tosh@is.s.u-tokyo.ac.jp
++W:	http://www.yl.is.s.u-tokyo.ac.jp/~tosh/kml/
++S:	Maintained
++
+ KERNEL NFSD, SUNRPC, AND LOCKD SERVERS
+ M:	"J. Bruce Fields" <bfields@fieldses.org>
+ L:	linux-nfs@vger.kernel.org
+diff --git a/Makefile b/Makefile
+index fbd43bf..e89d832 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,7 +1,7 @@
+ VERSION = 4
+ PATCHLEVEL = 0
+ SUBLEVEL = 0
+-EXTRAVERSION =
++EXTRAVERSION = -kml
+ NAME = Hurr durr I'ma sheep
+ 
+ # *DOCUMENTATION*
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index cf4c0c9..cb95d5d 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -2159,6 +2159,10 @@ endmenu
+ 
+ source "net/Kconfig"
+ 
++if (MMU && !CPU_USE_DOMAINS)
++source "kernel/Kconfig.kml"
++endif
++
+ source "drivers/Kconfig"
+ 
+ source "fs/Kconfig"
+diff --git a/arch/arm/include/asm/processor.h b/arch/arm/include/asm/processor.h
+index 8a1e8e9..6914ffa 100644
+--- a/arch/arm/include/asm/processor.h
++++ b/arch/arm/include/asm/processor.h
+@@ -23,6 +23,9 @@
+ #include <asm/ptrace.h>
+ #include <asm/types.h>
+ #include <asm/unified.h>
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#include <linux/thread_info.h>
++#endif
+ 
+ #ifdef __KERNEL__
+ #define STACK_TOP	((current->personality & ADDR_LIMIT_32BIT) ? \
+@@ -53,6 +56,14 @@ struct thread_struct {
+ #define nommu_start_thread(regs) regs->ARM_r10 = current->mm->start_data
+ #endif
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++static inline void clear_thread_flag_ku(void) { clear_thread_flag(TIF_KU); }
++static inline void set_thread_flag_ku(void) { set_thread_flag(TIF_KU); }
++#else
++static inline void clear_thread_flag_ku(void) { return; }
++static inline void set_thread_flag_ku(void) { return; }
++#endif
++
+ #define start_thread(regs,pc,sp)					\
+ ({									\
+ 	memset(regs->uregs, 0, sizeof(regs->uregs));			\
+@@ -66,7 +77,31 @@ struct thread_struct {
+ 	regs->ARM_pc = pc & ~1;		/* pc */			\
+ 	regs->ARM_sp = sp;		/* sp */			\
+ 	nommu_start_thread(regs);					\
++	clear_thread_flag_ku();						\
++})
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define start_kernel_thread(regs,pc,sp)					\
++({									\
++	unsigned long *stack = (unsigned long *)sp;			\
++	set_fs(KERNEL_DS);						\
++	memset(regs->uregs, 0, sizeof(regs->uregs));			\
++	if (current->personality & ADDR_LIMIT_32BIT)			\
++		regs->ARM_cpsr = SYSTEM_MODE;				\
++	else								\
++		regs->ARM_cpsr = USR26_MODE;				\
++	if (elf_hwcap & HWCAP_THUMB && pc & 1)				\
++		regs->ARM_cpsr |= PSR_T_BIT;				\
++	regs->ARM_cpsr |= PSR_ENDSTATE;					\
++	regs->ARM_pc = pc & ~1;		/* pc */			\
++	regs->ARM_sp = sp;		/* sp */			\
++	regs->ARM_r2 = stack[2];	/* r2 (envp) */			\
++	regs->ARM_r1 = stack[1];	/* r1 (argv) */			\
++	regs->ARM_r0 = stack[0];	/* r0 (argc) */			\
++	nommu_start_thread(regs);					\
++	set_thread_flag_ku();						\
+ })
++#endif
+ 
+ /* Forward declaration, a strange C thing */
+ struct task_struct;
+diff --git a/arch/arm/include/asm/ptrace.h b/arch/arm/include/asm/ptrace.h
+index 51622ba..6c40084 100644
+--- a/arch/arm/include/asm/ptrace.h
++++ b/arch/arm/include/asm/ptrace.h
+@@ -17,8 +17,15 @@ struct pt_regs {
+ 	unsigned long uregs[18];
+ };
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++static inline int test_thread_flag_ku(void);
++
++#define user_mode(regs)	\
++	((((regs)->ARM_cpsr & 0xf) == 0) || ((((regs)->ARM_cpsr & 0xf) == 0xf) && test_thread_flag_ku()))
++#else
+ #define user_mode(regs)	\
+ 	(((regs)->ARM_cpsr & 0xf) == 0)
++#endif
+ 
+ #ifdef CONFIG_ARM_THUMB
+ #define thumb_mode(regs) \
+@@ -60,6 +67,10 @@ static inline int valid_user_regs(struct pt_regs *regs)
+ 	if ((regs->ARM_cpsr & PSR_I_BIT) == 0) {
+ 		if (mode == USR_MODE)
+ 			return 1;
++#ifdef CONFIG_KERNEL_MODE_LINUX
++		if (mode == SYSTEM_MODE && test_thread_flag_ku())
++			return 1;
++#endif /* CONFIG_KERNEL_MODE_LINUX */
+ 		if (elf_hwcap & HWCAP_26BIT && mode == USR26_MODE)
+ 			return 1;
+ 	}
+diff --git a/arch/arm/include/asm/thread_info.h b/arch/arm/include/asm/thread_info.h
+index 72812a1..d5fea8a 100644
+--- a/arch/arm/include/asm/thread_info.h
++++ b/arch/arm/include/asm/thread_info.h
+@@ -159,6 +159,9 @@ extern int vfp_restore_user_hwstate(struct user_vfp __user *,
+ #define TIF_USING_IWMMXT	17
+ #define TIF_MEMDIE		18	/* is terminating due to OOM killer */
+ #define TIF_RESTORE_SIGMASK	20
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define TIF_KU			23
++#endif /* CONFIG_KERNEL_MODE_LINUX */
+ 
+ #define _TIF_SIGPENDING		(1 << TIF_SIGPENDING)
+ #define _TIF_NEED_RESCHED	(1 << TIF_NEED_RESCHED)
+@@ -169,6 +172,9 @@ extern int vfp_restore_user_hwstate(struct user_vfp __user *,
+ #define _TIF_SYSCALL_TRACEPOINT	(1 << TIF_SYSCALL_TRACEPOINT)
+ #define _TIF_SECCOMP		(1 << TIF_SECCOMP)
+ #define _TIF_USING_IWMMXT	(1 << TIF_USING_IWMMXT)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define _TIF_KU			(1 << TIF_KU)
++#endif /* CONFIG_KERNEL_MODE_LINUX */
+ 
+ /* Checks for any syscall work in entry-common.S */
+ #define _TIF_SYSCALL_WORK (_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | \
+@@ -180,5 +186,15 @@ extern int vfp_restore_user_hwstate(struct user_vfp __user *,
+ #define _TIF_WORK_MASK		(_TIF_NEED_RESCHED | _TIF_SIGPENDING | \
+ 				 _TIF_NOTIFY_RESUME | _TIF_UPROBE)
+ 
++#ifndef __ASSEMBLY__
++#ifdef CONFIG_KERNEL_MODE_LINUX
++static inline int test_ti_thread_flag(struct thread_info *ti, int flag);
++static inline int test_thread_flag_ku(void)
++{
++	return test_ti_thread_flag(current_thread_info(), TIF_KU);
++}
++#endif /* CONFIG_KERNEL_MODE_LINUX */
++#endif /* __ASSEMBLY__ */
++
+ #endif /* __KERNEL__ */
+ #endif /* __ASM_ARM_THREAD_INFO_H */
+diff --git a/arch/arm/kernel/entry-armv.S b/arch/arm/kernel/entry-armv.S
+index 672b219..015e91a 100644
+--- a/arch/arm/kernel/entry-armv.S
++++ b/arch/arm/kernel/entry-armv.S
+@@ -1103,7 +1103,11 @@ vector_rst:
+ 	.long	__irq_invalid			@  c
+ 	.long	__irq_invalid			@  d
+ 	.long	__irq_invalid			@  e
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	.long	__irq_usr			@  f
++#else
+ 	.long	__irq_invalid			@  f
++#endif
+ 
+ /*
+  * Data abort dispatcher
+@@ -1126,7 +1130,11 @@ vector_rst:
+ 	.long	__dabt_invalid			@  c
+ 	.long	__dabt_invalid			@  d
+ 	.long	__dabt_invalid			@  e
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	.long	__dabt_usr			@  f
++#else
+ 	.long	__dabt_invalid			@  f
++#endif
+ 
+ /*
+  * Prefetch abort dispatcher
+@@ -1149,7 +1157,11 @@ vector_rst:
+ 	.long	__pabt_invalid			@  c
+ 	.long	__pabt_invalid			@  d
+ 	.long	__pabt_invalid			@  e
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	.long	__pabt_usr			@  f
++#else
+ 	.long	__pabt_invalid			@  f
++#endif
+ 
+ /*
+  * Undef instr entry dispatcher
+@@ -1172,7 +1184,11 @@ vector_rst:
+ 	.long	__und_invalid			@  c
+ 	.long	__und_invalid			@  d
+ 	.long	__und_invalid			@  e
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	.long	__und_usr			@  f
++#else
+ 	.long	__und_invalid			@  f
++#endif
+ 
+ 	.align	5
+ 
+diff --git a/arch/arm/lib/uaccess_with_memcpy.c b/arch/arm/lib/uaccess_with_memcpy.c
+index 3e58d71..a399374 100644
+--- a/arch/arm/lib/uaccess_with_memcpy.c
++++ b/arch/arm/lib/uaccess_with_memcpy.c
+@@ -90,7 +90,11 @@ __copy_to_user_memcpy(void __user *to, const void *from, unsigned long n)
+ {
+ 	int atomic;
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	if (unlikely(segment_eq(get_fs(), KERNEL_DS))) {
++#elseif
++	if (unlikely(segment_eq(get_fs(), KERNEL_DS) && !test_thread_flag(TIF_KU))) {
++#endif
+ 		memcpy((void *)to, from, n);
+ 		return 0;
+ 	}
+@@ -153,7 +157,11 @@ __copy_to_user(void __user *to, const void *from, unsigned long n)
+ static unsigned long noinline
+ __clear_user_memset(void __user *addr, unsigned long n)
+ {
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	if (unlikely(segment_eq(get_fs(), KERNEL_DS))) {
++#elseif
++	if (unlikely(segment_eq(get_fs(), KERNEL_DS) && !test_thread_flag(TIF_KU))) {
++#endif
+ 		memset((void *)addr, 0, n);
+ 		return 0;
+ 	}
+diff --git a/arch/arm/vfp/vfphw.S b/arch/arm/vfp/vfphw.S
+index f74a8f7..69cdb2f 100644
+--- a/arch/arm/vfp/vfphw.S
++++ b/arch/arm/vfp/vfphw.S
+@@ -84,8 +84,21 @@ ENTRY(vfp_support_entry)
+ 	ldr	r3, [sp, #S_PSR]	@ Neither lazy restore nor FP exceptions
+ 	and	r3, r3, #MODE_MASK	@ are supported in kernel mode
+ 	teq	r3, #USR_MODE
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	bne	vfp_kmode_exception	@ Returns through lr
++#elseif
++	beq	vfp_user_mode
++	teq	r3, #SYSTEM_MODE
++	bne	vfp_kmode_exception
++	get_thread_info r3
++	ldr	r3, [r3, #TI_FLAGS]
++	tst	r3, #_TIF_KU
++	beq	vfp_kmode_exception
++#endif
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++vfp_user_mode:
++#endif
+ 	VFPFMRX	r1, FPEXC		@ Is the VFP enabled?
+ 	DBGSTR1	"fpexc %08x", r1
+ 	tst	r1, #FPEXC_EN
+diff --git a/arch/microblaze/Kconfig b/arch/microblaze/Kconfig
+index 0bce820..53866dc 100644
+--- a/arch/microblaze/Kconfig
++++ b/arch/microblaze/Kconfig
+@@ -284,6 +284,10 @@ endmenu
+ 
+ source "net/Kconfig"
+ 
++if (MMU)
++source "kernel/Kconfig.kml"
++endif
++
+ source "drivers/Kconfig"
+ 
+ source "fs/Kconfig"
+diff --git a/arch/microblaze/include/asm/processor.h b/arch/microblaze/include/asm/processor.h
+index 497a988..5a643b7 100644
+--- a/arch/microblaze/include/asm/processor.h
++++ b/arch/microblaze/include/asm/processor.h
+@@ -122,6 +122,11 @@ struct thread_struct {
+ 	.pgdir = swapper_pg_dir, \
+ }
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++void start_kernel_thread(struct pt_regs *regs,
++			unsigned long pc, unsigned long usp);
++#endif
++
+ /* Free all resources held by a thread. */
+ static inline void release_thread(struct task_struct *dead_task)
+ {
+diff --git a/arch/microblaze/include/asm/thread_info.h b/arch/microblaze/include/asm/thread_info.h
+index b699fbd..ddc9651 100644
+--- a/arch/microblaze/include/asm/thread_info.h
++++ b/arch/microblaze/include/asm/thread_info.h
+@@ -122,6 +122,10 @@ static inline struct thread_info *current_thread_info(void)
+ /* true if poll_idle() is polling TIF_NEED_RESCHED */
+ #define TIF_POLLING_NRFLAG	16
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define TIF_KU			31
++#endif
++
+ #define _TIF_SYSCALL_TRACE	(1 << TIF_SYSCALL_TRACE)
+ #define _TIF_NOTIFY_RESUME	(1 << TIF_NOTIFY_RESUME)
+ #define _TIF_SIGPENDING		(1 << TIF_SIGPENDING)
+@@ -131,6 +135,10 @@ static inline struct thread_info *current_thread_info(void)
+ #define _TIF_SYSCALL_AUDIT	(1 << TIF_SYSCALL_AUDIT)
+ #define _TIF_SECCOMP		(1 << TIF_SECCOMP)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define _TIF_KU			(1 << TIF_KU)
++#endif
++
+ /* work to do in syscall trace */
+ #define _TIF_WORK_SYSCALL_MASK  (_TIF_SYSCALL_TRACE | _TIF_SINGLESTEP | \
+ 				 _TIF_SYSCALL_AUDIT | _TIF_SECCOMP)
+diff --git a/arch/microblaze/kernel/process.c b/arch/microblaze/kernel/process.c
+index b2dd3719..c4221be 100644
+--- a/arch/microblaze/kernel/process.c
++++ b/arch/microblaze/kernel/process.c
+@@ -149,7 +149,22 @@ void start_thread(struct pt_regs *regs, unsigned long pc, unsigned long usp)
+ 	regs->msr |= MSR_UMS;
+ 	regs->msr &= ~MSR_VM;
+ #endif
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	clear_thread_flag(TIF_KU);
++#endif
++}
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++void start_kernel_thread(struct pt_regs *regs, unsigned long pc, unsigned long usp)
++{
++	set_fs(KERNEL_DS);
++	regs->pc = pc;
++	regs->r1 = usp;
++	regs->pt_mode = 0;
++	regs->msr &= ~MSR_UMS;
++	set_thread_flag(TIF_KU);
+ }
++#endif
+ 
+ #ifdef CONFIG_MMU
+ #include <linux/elfcore.h>
+diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
+index b7d31ca..5239012 100644
+--- a/arch/x86/Kconfig
++++ b/arch/x86/Kconfig
+@@ -2580,6 +2580,10 @@ config PMC_ATOM
+ 
+ source "net/Kconfig"
+ 
++if (X86_64 || X86_32) && !PARAVIRT && !CC_STACKPROTECTOR
++source "kernel/Kconfig.kml"
++endif
++
+ source "drivers/Kconfig"
+ 
+ source "drivers/firmware/Kconfig"
+diff --git a/arch/x86/include/asm/cpufeature.h b/arch/x86/include/asm/cpufeature.h
+index 90a5485..5aa31b8 100644
+--- a/arch/x86/include/asm/cpufeature.h
++++ b/arch/x86/include/asm/cpufeature.h
+@@ -390,6 +390,9 @@ extern const char * const x86_bug_flags[NBUGINTS*32];
+ #define cpu_has_eager_fpu	boot_cpu_has(X86_FEATURE_EAGER_FPU)
+ #define cpu_has_topoext		boot_cpu_has(X86_FEATURE_TOPOEXT)
+ #define cpu_has_bpext		boot_cpu_has(X86_FEATURE_BPEXT)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define cpu_has_smap		boot_cpu_has(X86_FEATURE_SMAP)
++#endif
+ 
+ #if __GNUC__ >= 4
+ extern void warn_pre_alternatives(void);
+diff --git a/arch/x86/include/asm/desc.h b/arch/x86/include/asm/desc.h
+index a94b82e..4958340 100644
+--- a/arch/x86/include/asm/desc.h
++++ b/arch/x86/include/asm/desc.h
+@@ -98,7 +98,10 @@ static inline int desc_empty(const void *ptr)
+ #define store_idt(dtr)				native_store_idt(dtr)
+ #define store_tr(tr)				(tr = native_store_tr())
+ 
+-#define load_TLS(t, cpu)			native_load_tls(t, cpu)
++#define load_TLS__nmi_unsafe(t, cpu)		native_load_tls__nmi_unsafe(t, cpu)
++#ifdef CONFIG_X86_64
++#define load_TLS(t, cpu)			load_TLS__nmi_unsafe(t, cpu)
++#endif
+ #define set_ldt					native_set_ldt
+ 
+ #define write_ldt_entry(dt, entry, desc)	native_write_ldt_entry(dt, entry, desc)
+@@ -112,25 +115,47 @@ static inline void paravirt_alloc_ldt(struct desc_struct *ldt, unsigned entries)
+ static inline void paravirt_free_ldt(struct desc_struct *ldt, unsigned entries)
+ {
+ }
+-#endif	/* CONFIG_PARAVIRT */
++#endif /* CONFIG_PARAVIRT */
+ 
+ #define store_ldt(ldt) asm("sldt %0" : "=m"(ldt))
+ 
+ static inline void native_write_idt_entry(gate_desc *idt, int entry, const gate_desc *gate)
+ {
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	NMI_DECLS_GSLDTR
++	preempt_disable();
++	NMI_SAVE_GSLDTR;
++#endif
+ 	memcpy(&idt[entry], gate, sizeof(*gate));
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	NMI_RESTORE_GSLDTR;
++	preempt_enable();
++#endif
+ }
+ 
+ static inline void native_write_ldt_entry(struct desc_struct *ldt, int entry, const void *desc)
+ {
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	NMI_DECLS_GSLDTR
++	preempt_disable();
++	NMI_SAVE_GSLDTR;
++#endif
+ 	memcpy(&ldt[entry], desc, 8);
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	NMI_RESTORE_GSLDTR;
++	preempt_enable();
++#endif
+ }
+ 
+ static inline void
+ native_write_gdt_entry(struct desc_struct *gdt, int entry, const void *desc, int type)
+ {
+ 	unsigned int size;
+-
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	NMI_DECLS_GSLDTR
++	preempt_disable();
++	NMI_SAVE_GSLDTR;
++#endif
+ 	switch (type) {
+ 	case DESC_TSS:	size = sizeof(tss_desc);	break;
+ 	case DESC_LDT:	size = sizeof(ldt_desc);	break;
+@@ -138,6 +163,10 @@ native_write_gdt_entry(struct desc_struct *gdt, int entry, const void *desc, int
+ 	}
+ 
+ 	memcpy(&gdt[entry], desc, size);
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	NMI_RESTORE_GSLDTR;
++	preempt_enable();
++#endif
+ }
+ 
+ static inline void pack_descriptor(struct desc_struct *desc, unsigned long base,
+@@ -192,11 +221,24 @@ static inline void __set_tss_desc(unsigned cpu, unsigned int entry, void *addr)
+ 
+ #define set_tss_desc(cpu, addr) __set_tss_desc(cpu, GDT_ENTRY_TSS, addr)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++static inline void clear_busy_flag_in_tss_descriptor(unsigned int cpu)
++{
++	get_cpu_gdt_table(cpu)[GDT_ENTRY_TSS].b &= (~0x00000200);
++}
++
++#endif
++
+ static inline void native_set_ldt(const void *addr, unsigned int entries)
+ {
+-	if (likely(entries == 0))
++	if (likely(entries == 0)) {
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++		unsigned cpu = smp_processor_id();
++		per_cpu(init_tss, cpu).x86_tss.ldt = 0;
++#endif
+ 		asm volatile("lldt %w0"::"q" (0));
+-	else {
++	} else {
+ 		unsigned cpu = smp_processor_id();
+ 		ldt_desc ldt;
+ 
+@@ -204,6 +246,9 @@ static inline void native_set_ldt(const void *addr, unsigned int entries)
+ 				      entries * LDT_ENTRY_SIZE - 1);
+ 		write_gdt_entry(get_cpu_gdt_table(cpu), GDT_ENTRY_LDT,
+ 				&ldt, DESC_LDT);
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++		per_cpu(init_tss, cpu).x86_tss.ldt = GDT_ENTRY_LDT * 8;
++#endif
+ 		asm volatile("lldt %w0"::"q" (GDT_ENTRY_LDT*8));
+ 	}
+ }
+@@ -242,7 +287,7 @@ static inline unsigned long native_store_tr(void)
+ 	return tr;
+ }
+ 
+-static inline void native_load_tls(struct thread_struct *t, unsigned int cpu)
++static inline void native_load_tls__nmi_unsafe(struct thread_struct *t, unsigned int cpu)
+ {
+ 	struct desc_struct *gdt = get_cpu_gdt_table(cpu);
+ 	unsigned int i;
+@@ -376,14 +421,36 @@ static inline void _set_gate(int gate, unsigned type, void *addr,
+  * Pentium F0 0F bugfix can have resulted in the mapped
+  * IDT being write-protected.
+  */
+-#define set_intr_gate(n, addr)						\
++#define priv_set_intr_gate_ist(n, addr, ist)				\
+ 	do {								\
+ 		BUG_ON((unsigned)n > 0xFF);				\
+-		_set_gate(n, GATE_INTERRUPT, (void *)addr, 0, 0,	\
++		_set_gate(n, GATE_INTERRUPT, (void *)addr, 0, ist,	\
+ 			  __KERNEL_CS);					\
+ 		_trace_set_gate(n, GATE_INTERRUPT, (void *)trace_##addr,\
+-				0, 0, __KERNEL_CS);			\
++				0, ist, __KERNEL_CS);			\
++	} while (0)
++
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_64)
++
++#define set_intr_gate(n, addr)						\
++	do {								\
++		priv_set_intr_gate_ist(n, addr, KML_STACK);		\
++	} while (0)
++
++#else
++
++#define set_intr_gate(n, addr)						\
++	do {								\
++		priv_set_intr_gate_ist(n, addr, 0);			\
+ 	} while (0)
++#endif
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define set_intr_gate_orig(n, addr)					\
++	do {								\
++		priv_set_intr_gate_ist(n, addr, 0);			\
++	} while (0)
++#endif
+ 
+ extern int first_system_vector;
+ /* used_vectors is BITMAP for irq is not managed by percpu vector_irq */
+@@ -409,11 +476,22 @@ static inline void alloc_system_vector(int vector)
+ /*
+  * This routine sets up an interrupt gate at directory privilege level 3.
+  */
++static void set_system_intr_gate_ist(int n, void *addr, unsigned ist);
+ static inline void set_system_intr_gate(unsigned int n, void *addr)
+ {
+-	BUG_ON((unsigned)n > 0xFF);
+-	_set_gate(n, GATE_INTERRUPT, addr, 0x3, 0, __KERNEL_CS);
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_64)
++	set_system_intr_gate_ist(n, addr, KML_STACK);
++#else
++	set_system_intr_gate_ist(n, addr, 0);
++#endif
++}
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++static inline void set_system_intr_gate_orig(unsigned int n, void *addr)
++{
++	set_system_intr_gate_ist(n, addr, 0);
+ }
++#endif
+ 
+ static inline void set_system_trap_gate(unsigned int n, void *addr)
+ {
+diff --git a/arch/x86/include/asm/elf.h b/arch/x86/include/asm/elf.h
+index ca3347a..c041ba5 100644
+--- a/arch/x86/include/asm/elf.h
++++ b/arch/x86/include/asm/elf.h
+@@ -275,7 +275,7 @@ extern int force_personality32;
+ 
+ struct task_struct;
+ 
+-#define	ARCH_DLINFO_IA32						\
++#define	ARCH_DLINFO_IA32_ORIG						\
+ do {									\
+ 	if (vdso32_enabled) {						\
+ 		NEW_AUX_ENT(AT_SYSINFO,	VDSO_ENTRY);			\
+@@ -283,12 +283,33 @@ do {									\
+ 	}								\
+ } while (0)
+ 
++#define ARCH_DLINFO_IA32_KML						\
++do {									\
++	if (vdso32_enabled) {						\
++		NEW_AUX_ENT(AT_SYSINFO,					\
++			    (kernel_mode ? VDSO_KML_ENTRY : VDSO_ENTRY));\
++		NEW_AUX_ENT(AT_SYSINFO_EHDR, VDSO_CURRENT_BASE);	\
++	}								\
++} while (0)
++
++#ifndef CONFIG_KERNEL_MODE_LINUX
++#define ARCH_DLINFO_IA32 ARCH_DLINFO_IA32_ORIG
++#else
++#define ARCH_DLINFO_IA32 ARCH_DLINFO_IA32_KML
++#endif
++
+ #ifdef CONFIG_X86_32
+ 
+ #define STACK_RND_MASK (0x7ff)
+ 
+ #define ARCH_DLINFO		ARCH_DLINFO_IA32
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define VDSO_KML_ENTRY \
++	((unsigned long)current->mm->context.vdso +			\
++	 selected_vdso32->sym___kernel_vsyscall_kml)
++#endif
++
+ /* update AT_VECTOR_SIZE_ARCH if the number of NEW_AUX_ENT entries changes */
+ 
+ #else /* CONFIG_X86_32 */
+@@ -296,13 +317,37 @@ do {									\
+ /* 1GB for 64bit, 8MB for 32bit */
+ #define STACK_RND_MASK (test_thread_flag(TIF_ADDR32) ? 0x7ff : 0x3fffff)
+ 
+-#define ARCH_DLINFO							\
++#define ARCH_DLINFO_ORIG						\
+ do {									\
+ 	if (vdso64_enabled)						\
+ 		NEW_AUX_ENT(AT_SYSINFO_EHDR,				\
+ 			    (unsigned long __force)current->mm->context.vdso); \
+ } while (0)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++extern void kml_call_entry(void);
++#endif
++
++#define VDSO_KML_ENTRY \
++	((unsigned long) kml_call_entry)
++
++#define ARCH_DLINFO_KML							\
++do {									\
++	if (vdso64_enabled) {						\
++		if (kernel_mode) {					\
++			NEW_AUX_ENT(AT_SYSINFO, VDSO_KML_ENTRY);	\
++		}							\
++		NEW_AUX_ENT(AT_SYSINFO_EHDR,				\
++			    (unsigned long __force)current->mm->context.vdso); \
++	}								\
++} while (0)
++
++#ifndef CONFIG_KERNEL_MODE_LINUX
++#define ARCH_DLINFO ARCH_DLINFO_ORIG
++#else
++#define ARCH_DLINFO ARCH_DLINFO_KML
++#endif
++
+ /* As a historical oddity, the x32 and x86_64 vDSOs are controlled together. */
+ #define ARCH_DLINFO_X32							\
+ do {									\
+@@ -317,7 +362,7 @@ do {									\
+ if (test_thread_flag(TIF_X32))						\
+ 	ARCH_DLINFO_X32;						\
+ else									\
+-	ARCH_DLINFO_IA32
++	ARCH_DLINFO_IA32_ORIG
+ 
+ #define COMPAT_ELF_ET_DYN_BASE	(TASK_UNMAPPED_BASE + 0x1000000)
+ 
+diff --git a/arch/x86/include/asm/hw_irq.h b/arch/x86/include/asm/hw_irq.h
+index 9662290..01ce1df 100644
+--- a/arch/x86/include/asm/hw_irq.h
++++ b/arch/x86/include/asm/hw_irq.h
+@@ -193,6 +193,37 @@ extern void (*__initconst interrupt[FIRST_SYSTEM_VECTOR
+ typedef int vector_irq_t[NR_VECTORS];
+ DECLARE_PER_CPU(vector_irq_t, vector_irq);
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++extern struct desc_struct idt_table[256];
++extern void (*test_ISR_and_handle_interrupt)(void);
++
++static inline unsigned long get_address_from_desc(struct desc_struct* s)
++{
++	return (s->a & 0x0000ffff) | (s->b & 0xffff0000);
++}
++
++static inline unsigned long get_intr_address(unsigned long vec)
++{
++	return get_address_from_desc(&idt_table[vec]);
++}
++
++static inline void handle_interrupt_manually(unsigned long vec)
++{
++	unsigned long handler;
++
++	handler = get_intr_address(vec);
++
++	__asm__ __volatile__ (
++	"pushfl\n\t"
++	"pushl %1\n\t"
++	"pushl $0f\n\t"
++	"jmp *%0\n"
++	"0:\n\t"
++	: : "r" (handler), "i" (__KERNEL_CS)
++	);
++}
++#endif
++
+ #endif /* !ASSEMBLY_ */
+ 
+ #endif /* _ASM_X86_HW_IRQ_H */
+diff --git a/arch/x86/include/asm/page_64_types.h b/arch/x86/include/asm/page_64_types.h
+index 4edd53b..7c1301f 100644
+--- a/arch/x86/include/asm/page_64_types.h
++++ b/arch/x86/include/asm/page_64_types.h
+@@ -24,7 +24,12 @@
+ #define NMI_STACK 2
+ #define DEBUG_STACK 3
+ #define MCE_STACK 4
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ #define N_EXCEPTION_STACKS 4  /* hw limit: 7 */
++#else
++#define KML_STACK 5 
++#define N_EXCEPTION_STACKS 5  /* hw limit: 7 */
++#endif
+ 
+ #define PUD_PAGE_SIZE		(_AC(1, UL) << PUD_SHIFT)
+ #define PUD_PAGE_MASK		(~(PUD_PAGE_SIZE-1))
+diff --git a/arch/x86/include/asm/processor.h b/arch/x86/include/asm/processor.h
+index ec1c935..9ef442d 100644
+--- a/arch/x86/include/asm/processor.h
++++ b/arch/x86/include/asm/processor.h
+@@ -146,7 +146,9 @@ struct cpuinfo_x86 {
+ extern struct cpuinfo_x86	boot_cpu_data;
+ extern struct cpuinfo_x86	new_cpu_data;
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ extern struct tss_struct	doublefault_tss;
++#endif
+ extern __u32			cpu_caps_cleared[NCAPINTS];
+ extern __u32			cpu_caps_set[NCAPINTS];
+ 
+@@ -198,11 +200,6 @@ static inline void native_cpuid(unsigned int *eax, unsigned int *ebx,
+ 	    : "memory");
+ }
+ 
+-static inline void load_cr3(pgd_t *pgdir)
+-{
+-	write_cr3(__pa(pgdir));
+-}
+-
+ #ifdef CONFIG_X86_32
+ /* This is the TSS defined by the hardware. */
+ struct x86_hw_tss {
+@@ -280,10 +277,25 @@ struct tss_struct {
+ 	 */
+ 	unsigned long		stack[64];
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define KML_STACK_SIZE (8*16)
++	char			kml_stack[KML_STACK_SIZE] __attribute__ ((aligned (16)));
++#endif
+ } ____cacheline_aligned;
+ 
+ DECLARE_PER_CPU_SHARED_ALIGNED(struct tss_struct, init_tss);
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++DECLARE_PER_CPU(struct tss_struct, doublefault_tsses);
++DECLARE_PER_CPU(struct tss_struct, nmi_tsses);
++DECLARE_PER_CPU(struct dft_stack_struct, dft_stacks);
++DECLARE_PER_CPU(struct nmi_stack_struct, nmi_stacks);
++DECLARE_PER_CPU(unsigned long, esp0);
++DECLARE_PER_CPU(unsigned long, unused);
++extern void init_doublefault_tss(int);
++extern void init_nmi_tss(int);
++#endif
++
+ /*
+  * Save the original ist values for checking stack pointers during debugging
+  */
+@@ -525,6 +537,23 @@ struct thread_struct {
+ 	unsigned char fpu_counter;
+ };
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++struct dft_stack_struct {
++	unsigned long error_code;
++	struct tss_struct* this_tss;
++	struct tss_struct* normal_tss;
++};
++
++struct nmi_stack_struct {
++	/* This __pad field may be used in NMI handler (see entry.S) */
++	unsigned long __pad[1];
++	struct tss_struct* this_tss;
++	struct tss_struct* normal_tss;
++	void* dft_tss_desc;
++	int need_nmi;
++};
++#endif
++
+ /*
+  * Set IOPL bits in EFLAGS from given mask
+  */
+@@ -549,6 +578,9 @@ native_load_sp0(struct tss_struct *tss, struct thread_struct *thread)
+ {
+ 	tss->x86_tss.sp0 = thread->sp0;
+ #ifdef CONFIG_X86_32
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	this_cpu_write_4(esp0, thread->sp0);
++#endif
+ 	/* Only happens when SEP is enabled, no need to test "SEP"arately: */
+ 	if (unlikely(tss->x86_tss.ss1 != thread->sysenter_cs)) {
+ 		tss->x86_tss.ss1 = thread->sysenter_cs;
+@@ -912,6 +944,11 @@ DECLARE_PER_CPU(unsigned long, old_rsp);
+ extern void start_thread(struct pt_regs *regs, unsigned long new_ip,
+ 					       unsigned long new_sp);
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++extern void start_kernel_thread(struct pt_regs *regs, unsigned long new_ip,
++						      unsigned long new_sp);
++#endif
++
+ /*
+  * This decides where the kernel will search for a free chunk of vm
+  * space during mmap's.
+@@ -962,6 +999,24 @@ static inline uint32_t hypervisor_cpuid_base(const char *sig, uint32_t leaves)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++#define load_cr3(pgdir) \
++do {									\
++	int cpu = smp_processor_id();					\
++	unsigned long pa_pgdir = __pa(pgdir);				\
++									\
++	per_cpu(init_tss, cpu)		.x86_tss.__cr3 = pa_pgdir;	\
++	per_cpu(doublefault_tsses, cpu)	.x86_tss.__cr3 = pa_pgdir;	\
++	per_cpu(nmi_tsses, cpu)		.x86_tss.__cr3 = pa_pgdir;	\
++	write_cr3(pa_pgdir);						\
++} while (0)
++#else
++static inline void load_cr3(pgd_t *pgdir)
++{
++	write_cr3(__pa(pgdir));
++}
++#endif
++
+ extern unsigned long arch_align_stack(unsigned long sp);
+ extern void free_init_pages(char *what, unsigned long begin, unsigned long end);
+ 
+diff --git a/arch/x86/include/asm/segment.h b/arch/x86/include/asm/segment.h
+index db257a5..40680e5 100644
+--- a/arch/x86/include/asm/segment.h
++++ b/arch/x86/include/asm/segment.h
+@@ -74,7 +74,11 @@
+  *  27 - per-cpu			[ offset to per-cpu data area ]
+  *  28 - stack_canary-20		[ for stack protector ]
+  *  29 - unused
++#ifndef CONFIG_KERNEL_MODE_LINUX
+  *  30 - unused
++#else
++ *  30 - TSS for nmi handler
++#endif
+  *  31 - TSS for double fault handler
+  */
+ #define GDT_ENTRY_TLS_MIN	6
+@@ -113,7 +117,25 @@
+ #define __KERNEL_STACK_CANARY		0
+ #endif
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define GDT_ENTRY_NMI_TSS		30
++#define __NMI (GDT_ENTRY_NMI_TSS * 8)
++#endif
++
+ #define GDT_ENTRY_DOUBLEFAULT_TSS	31
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define __DOUBLEFAULT_TSS (GDT_ENTRY_DOUBLEFAULT_TSS * 8)
++#endif
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++#define __KU_CS_INTERRUPT	((1 << 16) | __USER_CS)
++#define __KU_CS_EXCEPTION	((1 << 17) | __USER_CS)
++
++#define kernel_mode_user_process(cs) ((cs) & 0xffff0000)
++#define need_error_code_fix_on_page_fault(cs) ((cs) == __KU_CS_EXCEPTION)
++
++#endif
+ 
+ /*
+  * The GDT has 32 entries
+@@ -164,6 +186,11 @@
+ #define __USER32_CS   (GDT_ENTRY_DEFAULT_USER32_CS*8+3)
+ #define __USER32_DS	__USER_DS
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define __KU_CS			(0x7fff0003 | __KERNEL_CS)
++#define need_error_code_fix_on_page_fault(cs) ((cs) & 0x03)
++#endif
++
+ #define GDT_ENTRY_TSS 8	/* needs two entries */
+ #define GDT_ENTRY_LDT 10 /* needs two entries */
+ #define GDT_ENTRY_TLS_MIN 12
+@@ -227,6 +254,65 @@ do {									\
+ 		     : "+r" (__val) : : "memory");			\
+ } while (0)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++#define loadldtr(value)				\
++	asm volatile("\n"			\
++ 		"1:\t"				\
++		"lldt %0\n"			\
++		"2:\n"				\
++		".section .fixup,\"ax\"\n"	\
++		"3:\t"				\
++		"pushl $0\n\t"			\
++		"lldt (%%esp)\n\t"		\
++		"addl $4, %%esp\n\t"		\
++		"jmp 2b\n"			\
++		".previous\n"			\
++		".section __ex_table,\"a\"\n\t"	\
++		".align 4\n\t"			\
++		".long 1b,3b\n"			\
++		".previous"			\
++		: :"m" (*(unsigned int *)&(value)))
++
++#define saveldtr(value) \
++	asm volatile("sldt %0\n\t" : "=m" (*(int *)&(value)))
++
++#endif
++
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++
++#define NMI_DECLS_GS \
++	unsigned long system__saved_gs = 0;
++
++#define NMI_SAVE_GS \
++	savesegment(gs, system__saved_gs)
++
++#define NMI_RESTORE_GS \
++	loadsegment(gs, system__saved_gs)
++
++#define NMI_DECLS_GSLDTR \
++	NMI_DECLS_GS \
++	unsigned long system__saved_ldtr = 0;
++
++#define NMI_SAVE_GSLDTR \
++	NMI_SAVE_GS;	\
++	saveldtr(system__saved_ldtr)
++
++#define NMI_RESTORE_GSLDTR \
++	loadldtr(system__saved_ldtr);	\
++	NMI_RESTORE_GS
++
++#else
++
++#define NMI_DECLS_GS
++#define NMI_SAVE_GS
++#define NMI_RESTORE_GS
++#define NMI_DECLS_GSLDTR
++#define NMI_SAVE_GSLDTR
++#define NMI_RESTORE_GSLDTR
++
++#endif
++
+ /*
+  * Save a segment register away
+  */
+diff --git a/arch/x86/include/asm/sigcontext.h b/arch/x86/include/asm/sigcontext.h
+index 9dfce4e..857e13b 100644
+--- a/arch/x86/include/asm/sigcontext.h
++++ b/arch/x86/include/asm/sigcontext.h
+@@ -20,7 +20,11 @@ struct sigcontext {
+ 	unsigned long trapno;
+ 	unsigned long err;
+ 	unsigned long ip;
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	unsigned short cs, __csh;
++#else
++	unsigned long xcs;
++#endif
+ 	unsigned long flags;
+ 	unsigned long sp_at_signal;
+ 	unsigned short ss, __ssh;
+diff --git a/arch/x86/include/asm/switch_to.h b/arch/x86/include/asm/switch_to.h
+index 751bf4b..10a8f8e 100644
+--- a/arch/x86/include/asm/switch_to.h
++++ b/arch/x86/include/asm/switch_to.h
+@@ -130,4 +130,18 @@ do {									\
+ 
+ #endif /* CONFIG_X86_32 */
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++/*
++ * The following code was moved from 'switch_to' for NMI safety.
++ *
++ */
++#define prepare_arch_switch(next)					\
++do {									\
++	struct task_struct* prev = current;				\
++	savesegment(gs, prev->thread.gs);				\
++} while (0)
++
++#endif
++
+ #endif /* _ASM_X86_SWITCH_TO_H */
+diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
+index 1d4e4f2..4ce71b8 100644
+--- a/arch/x86/include/asm/thread_info.h
++++ b/arch/x86/include/asm/thread_info.h
+@@ -86,6 +86,9 @@ struct thread_info {
+ #define TIF_SYSCALL_TRACEPOINT	28	/* syscall tracepoint instrumentation */
+ #define TIF_ADDR32		29	/* 32-bit address space on 64 bits */
+ #define TIF_X32			30	/* 32-bit native x86-64 binary */
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define TIF_KU			31	/* kernel-mode user process */
++#endif
+ 
+ #define _TIF_SYSCALL_TRACE	(1 << TIF_SYSCALL_TRACE)
+ #define _TIF_NOTIFY_RESUME	(1 << TIF_NOTIFY_RESUME)
+@@ -109,6 +112,9 @@ struct thread_info {
+ #define _TIF_SYSCALL_TRACEPOINT	(1 << TIF_SYSCALL_TRACEPOINT)
+ #define _TIF_ADDR32		(1 << TIF_ADDR32)
+ #define _TIF_X32		(1 << TIF_X32)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define _TIF_KU			(1 << TIF_KU)
++#endif
+ 
+ /* work to do in syscall_trace_enter() */
+ #define _TIF_WORK_SYSCALL_ENTRY	\
+diff --git a/arch/x86/include/asm/vdso.h b/arch/x86/include/asm/vdso.h
+index 8021bd2..1e93846 100644
+--- a/arch/x86/include/asm/vdso.h
++++ b/arch/x86/include/asm/vdso.h
+@@ -27,6 +27,9 @@ struct vdso_image {
+ 	long sym___kernel_rt_sigreturn;
+ 	long sym___kernel_vsyscall;
+ 	long sym_VDSO32_SYSENTER_RETURN;
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	long sym___kernel_vsyscall_kml;
++#endif
+ };
+ 
+ #ifdef CONFIG_X86_64
+diff --git a/arch/x86/kernel/Makefile b/arch/x86/kernel/Makefile
+index cdb1b70..51c67fe 100644
+--- a/arch/x86/kernel/Makefile
++++ b/arch/x86/kernel/Makefile
+@@ -20,6 +20,20 @@ KASAN_SANITIZE_head$(BITS).o := n
+ KASAN_SANITIZE_dumpstack.o := n
+ KASAN_SANITIZE_dumpstack_$(BITS).o := n
+ 
++ifdef CONFIG_KERNEL_MODE_LINUX
++syscall32 := $(srctree)/arch/x86/syscalls/syscall_32.tbl
++kmlsystbl := $(srctree)/$(src)/kml_syscall_table_32.sh
++
++quiet_cmd_kmlsystbl = KML_SYSTBL  $@
++      cmd_kmlsystbl = $(CONFIG_SHELL) '$(kmlsystbl)' $< $@
++
++$(obj)/kml_syscall_table_32.S: $(syscall32) $(srctree)/$(src)/kml_syscall_table_maker_32.h $(kmlsystbl)
++	$(call if_changed,kmlsystbl)
++
++$(obj)/entry_32.o: $(obj)/entry_32.S $(obj)/kml_syscall_table_32.S
++	$(call if_changed,as_o_S)
++endif
++
+ CFLAGS_irq.o := -I$(src)/../include/asm/trace
+ 
+ obj-y			:= process_$(BITS).o signal.o entry_$(BITS).o
+@@ -78,6 +92,7 @@ obj-$(CONFIG_CRASH_DUMP)	+= crash_dump_$(BITS).o
+ obj-y				+= kprobes/
+ obj-$(CONFIG_MODULES)		+= module.o
+ obj-$(CONFIG_DOUBLEFAULT)	+= doublefault.o
++obj-$(CONFIG_KERNEL_MODE_LINUX)	+= task.o
+ obj-$(CONFIG_KGDB)		+= kgdb.o
+ obj-$(CONFIG_VM86)		+= vm86_32.o
+ obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
+diff --git a/arch/x86/kernel/apic/io_apic.c b/arch/x86/kernel/apic/io_apic.c
+index f4dc246..8b0a033 100644
+--- a/arch/x86/kernel/apic/io_apic.c
++++ b/arch/x86/kernel/apic/io_apic.c
+@@ -1279,6 +1279,10 @@ static void setup_ioapic_irq(unsigned int irq, struct irq_cfg *cfg,
+ 	ioapic_write_entry(attr->ioapic, attr->ioapic_pin, entry);
+ }
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++static void IO_APIC_test_ISR_and_handle_interrupt(void);
++#endif
++
+ static void __init setup_IO_APIC_irqs(void)
+ {
+ 	unsigned int ioapic, pin;
+@@ -1296,6 +1300,10 @@ static void __init setup_IO_APIC_irqs(void)
+ 			pin_2_irq(idx, ioapic, pin,
+ 				  ioapic ? 0 : IOAPIC_MAP_ALLOC);
+ 	}
++
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++	test_ISR_and_handle_interrupt = IO_APIC_test_ISR_and_handle_interrupt;
++#endif
+ }
+ 
+ /*
+@@ -2658,6 +2666,45 @@ int acpi_get_override_irq(u32 gsi, int *trigger, int *polarity)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++
++static __inline__ int ffsr0(int x)
++{
++	int r;
++
++	__asm__ ("bsrl %1, %0\n\t"
++		 "jnz 1f\n\t"
++		 "movl $-1, %0\n"
++		 "1:"
++		 : "=r" (r) : "rm" (x));
++
++	return r;
++}
++
++static void IO_APIC_test_ISR_and_handle_interrupt(void)
++{
++	int i;
++
++	for (i = 7; i >= 0; i--) {
++		unsigned long v;
++		int idx;
++
++		v = apic_read(APIC_ISR + i * 0x10);
++
++		idx = ffsr0(v);
++
++		if (idx < 0) {
++			continue;
++		}
++
++		handle_interrupt_manually(idx + i * 32);
++
++		return;
++	}
++
++}
++#endif
++
+ /*
+  * This function currently is only a helper for the i386 smp boot process where
+  * we need to reprogram the ioredtbls to cater for the cpus which have come online
+diff --git a/arch/x86/kernel/apm_32.c b/arch/x86/kernel/apm_32.c
+index 927ec92..9a2feee 100644
+--- a/arch/x86/kernel/apm_32.c
++++ b/arch/x86/kernel/apm_32.c
+@@ -605,9 +605,11 @@ static long __apm_bios_call(void *_call)
+ 	struct desc_struct	save_desc_40;
+ 	struct desc_struct	*gdt;
+ 	struct apm_bios_call	*call = _call;
++	NMI_DECLS_GS
+ 
+ 	cpu = get_cpu();
+ 	BUG_ON(cpu != 0);
++	NMI_SAVE_GS;
+ 	gdt = get_cpu_gdt_table(cpu);
+ 	save_desc_40 = gdt[0x40 / 8];
+ 	gdt[0x40 / 8] = bad_bios_desc;
+@@ -620,6 +622,7 @@ static long __apm_bios_call(void *_call)
+ 	APM_DO_RESTORE_SEGS;
+ 	apm_irq_restore(flags);
+ 	gdt[0x40 / 8] = save_desc_40;
++	NMI_RESTORE_GS;
+ 	put_cpu();
+ 
+ 	return call->eax & 0xff;
+@@ -681,9 +684,11 @@ static long __apm_bios_call_simple(void *_call)
+ 	struct desc_struct	save_desc_40;
+ 	struct desc_struct	*gdt;
+ 	struct apm_bios_call	*call = _call;
++	NMI_DECLS_GS
+ 
+ 	cpu = get_cpu();
+ 	BUG_ON(cpu != 0);
++	NMI_SAVE_GS;
+ 	gdt = get_cpu_gdt_table(cpu);
+ 	save_desc_40 = gdt[0x40 / 8];
+ 	gdt[0x40 / 8] = bad_bios_desc;
+@@ -695,6 +700,7 @@ static long __apm_bios_call_simple(void *_call)
+ 	APM_DO_RESTORE_SEGS;
+ 	apm_irq_restore(flags);
+ 	gdt[0x40 / 8] = save_desc_40;
++	NMI_RESTORE_GS;
+ 	put_cpu();
+ 	return error;
+ }
+diff --git a/arch/x86/kernel/asm-offsets_64.c b/arch/x86/kernel/asm-offsets_64.c
+index fdcbb4d..d1e7ab5 100644
+--- a/arch/x86/kernel/asm-offsets_64.c
++++ b/arch/x86/kernel/asm-offsets_64.c
+@@ -81,6 +81,9 @@ int main(void)
+ #undef ENTRY
+ 
+ 	OFFSET(TSS_ist, tss_struct, x86_tss.ist);
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	OFFSET(TSS_kml_stack, tss_struct, kml_stack);
++#endif
+ 	BLANK();
+ 
+ 	DEFINE(__NR_syscall_max, sizeof(syscalls_64) - 1);
+diff --git a/arch/x86/kernel/cpu/common.c b/arch/x86/kernel/cpu/common.c
+index 2346c95..418051e 100644
+--- a/arch/x86/kernel/cpu/common.c
++++ b/arch/x86/kernel/cpu/common.c
+@@ -278,8 +278,13 @@ __setup("nosmep", setup_disable_smep);
+ 
+ static __always_inline void setup_smep(struct cpuinfo_x86 *c)
+ {
+-	if (cpu_has(c, X86_FEATURE_SMEP))
+-		cr4_set_bits(X86_CR4_SMEP);
++	if (cpu_has(c, X86_FEATURE_SMEP)) {
++		if (config_enabled(CONFIG_KERNEL_MODE_LINUX)) {
++			printk(KERN_INFO "SMEP is not enabled because it is not compatible with Kernel Mode Linux.\n");
++		} else {
++			cr4_set_bits(X86_CR4_SMEP);
++		}
++	}
+ }
+ 
+ static __init int setup_disable_smap(char *arg)
+@@ -1351,7 +1356,13 @@ void cpu_init(void)
+ 		for (v = 0; v < N_EXCEPTION_STACKS; v++) {
+ 			estacks += exception_stack_sizes[v];
+ 			oist->ist[v] = t->x86_tss.ist[v] =
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 					(unsigned long)estacks;
++#else
++					(v + 1 == KML_STACK) ?
++						(unsigned long)(t->kml_stack + KML_STACK_SIZE)
++						: (unsigned long)estacks;
++#endif
+ 			if (v == DEBUG_STACK-1)
+ 				per_cpu(debug_stack_addr, cpu) = (unsigned long)estacks;
+ 		}
+@@ -1393,6 +1404,10 @@ void cpu_init(void)
+ 	struct task_struct *curr = current;
+ 	struct tss_struct *t = &per_cpu(init_tss, cpu);
+ 	struct thread_struct *thread = &curr->thread;
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	struct tss_struct* doublefault_tss = &per_cpu(doublefault_tsses, cpu);
++	struct tss_struct* nmi_tss = &per_cpu(nmi_tsses, cpu);
++#endif
+ 
+ 	wait_for_master_cpu(cpu);
+ 
+@@ -1427,10 +1442,17 @@ void cpu_init(void)
+ 
+ 	t->x86_tss.io_bitmap_base = offsetof(struct tss_struct, io_bitmap);
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ #ifdef CONFIG_DOUBLEFAULT
+ 	/* Set up doublefault TSS pointer in the GDT */
+ 	__set_tss_desc(cpu, GDT_ENTRY_DOUBLEFAULT_TSS, &doublefault_tss);
+ #endif
++#else
++	init_doublefault_tss(cpu);
++	init_nmi_tss(cpu);
++	__set_tss_desc(cpu, GDT_ENTRY_DOUBLEFAULT_TSS, doublefault_tss);
++	__set_tss_desc(cpu, GDT_ENTRY_NMI_TSS, nmi_tss);
++#endif
+ 
+ 	clear_all_debug_regs();
+ 	dbg_restore_debug_regs();
+diff --git a/arch/x86/kernel/direct_call_32.h b/arch/x86/kernel/direct_call_32.h
+new file mode 100644
+index 0000000..92f7932
+--- /dev/null
++++ b/arch/x86/kernel/direct_call_32.h
+@@ -0,0 +1,134 @@
++/*
++ * Copyright 2003 Toshiyuki Maeda
++ *
++ * This file is part of Kernel Mode Linux.
++ *
++ * Kernel Mode Linux is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2, or (at your option)
++ * any later version.
++ *
++ * Kernel Mode Linux is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++/*
++ * These are macros for making direct_call_table.
++ *
++ * This file should be included only from the "sys_call_table_maker.h" file.
++ */
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++.macro direct_prepare_stack argnum
++.if \argnum
++addl $-(4 * \argnum), %esp
++.else
++addl $-4, %esp
++.endif
++.endm
++
++.macro direct_push_args argnum
++.if \argnum
++direct_push_args "(\argnum - 1)"
++movl (12 + (\argnum - 1) * 4)(%ebp), %eax
++movl %eax, ((\argnum - 1) * 4)(%esp)
++.endif
++.endm
++
++#define MAKE_DIRECTCALL(entry, argnum, syscall_num) \
++.text; \
++ENTRY(direct_ ## entry); \
++	pushl %ebp; \
++	movl %esp, %ebp; \
++	movl PER_CPU_VAR(esp0), %esp; \
++\
++	direct_prepare_stack argnum; \
++	direct_push_args argnum; \
++\
++	call entry; \
++\
++	GET_THREAD_INFO(%edx); \
++	leave; \
++\
++	movl TI_flags(%edx), %ecx; \
++	testl $_TIF_ALLWORK_MASK, %ecx; \
++	jne 0f; \
++	ret; \
++0:; \
++	pushl %eax; \
++	pushl %ebx; \
++	pushl %edi; \
++	pushl %esi; \
++	pushl %ebp; \
++	movl $(syscall_num), %eax; \
++	jmp direct_exit_work_ ## argnum;
++
++#define MAKE_DIRECTCALL_SPECIAL(entry, argnum, syscall_num) \
++.text; \
++ENTRY(direct_ ## entry); \
++	pushl %ebx; \
++	pushl %edi; \
++	pushl %esi; \
++	pushl %ebp; \
++	add $-4, %esp; \
++\
++	movl $(syscall_num), %eax; \
++\
++	call direct_special_work_ ## argnum; \
++\
++	pushfl; \
++	pushl %cs; \
++	pushl $direct_wrapper_int_post; \
++	jmp system_call;
++
++direct_wrapper_int_pre:
++	int $0x80
++direct_wrapper_int_post:
++	addl $4, %esp
++	popl %ebp
++	popl %esi
++	popl %edi
++	popl %ebx
++	ret
++
++direct_exit_work_6:
++	movl 48(%esp), %ebp
++direct_exit_work_5:
++	movl 44(%esp), %edi
++direct_exit_work_4:
++	movl 40(%esp), %esi
++direct_exit_work_3:
++	movl 36(%esp), %edx
++direct_exit_work_2:
++	movl 32(%esp), %ecx
++direct_exit_work_1:
++	movl 28(%esp), %ebx
++direct_exit_work_0:
++	pushfl
++	pushl %cs
++	pushl $direct_wrapper_int_post
++	jmp kml_exit_work
++
++direct_special_work_6:
++	movl 52(%esp), %ebp
++direct_special_work_5:
++	movl 48(%esp), %edi
++direct_special_work_4:
++	movl 44(%esp), %esi
++direct_special_work_3:
++	movl 40(%esp), %edx
++direct_special_work_2:
++	movl 36(%esp), %ecx
++direct_special_work_1:
++	movl 32(%esp), %ebx
++direct_special_work_0:
++	ret
++
++#endif
+diff --git a/arch/x86/kernel/entry_32.S b/arch/x86/kernel/entry_32.S
+index 31e2d5b..1e6f410 100644
+--- a/arch/x86/kernel/entry_32.S
++++ b/arch/x86/kernel/entry_32.S
+@@ -69,6 +69,10 @@
+ #define sysexit_audit	syscall_exit_work
+ #endif
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#include <linux/threads.h>
++#endif
++
+ 	.section .entry.text, "ax"
+ 
+ /*
+@@ -254,6 +258,117 @@
+ 	POP_GS_EX
+ .endm
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
++
++#define SWITCH_STACK_TO_KK_INTERRUPT
++#define SWITCH_STACK_TO_KK_EXCEPTION
++#define SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
++
++#else
++
++#define TASK_SIZE               (__PAGE_OFFSET)
++
++#define __KU_CS_INTERRUPT	((1 << 16) | __USER_CS)
++#define __KU_CS_EXCEPTION	((1 << 17) | __USER_CS)
++
++/*
++ * These are macros for stack switching.
++ */
++
++.macro SWITCH_STACK_TO_KK_INTERRUPT
++	/* Check whether if we were in the kernel-user mode or not. */
++	cmpl $(TASK_SIZE), %esp
++	ja 1f
++
++	/*
++	 * We assume that the processor clears the High 16 bits of XCS.
++	 */
++
++	/*
++	 * We were in the kernel-user mode.
++	 * Therefore, %fs == __KERNEL_PERCPU.
++	 */
++
++	/*
++	 * We can't use the space where CS is saved,
++	 * because it may cause a page fault (though it's very rare...)
++	 * and it conflicts with the interrupt.
++	 */
++	movl %ebp, PER_CPU_VAR(unused)		/* save %ebp */
++	movl %esp, %ebp				/* save %esp to %ebp */
++	movl PER_CPU_VAR(esp0), %esp		/* switch the stack! */
++
++	addl $-4, %esp			/* push XSS */
++	pushl %ebp			/* push old %esp */
++	pushl $0			/* push EFLAGS */
++	pushl $(__KU_CS_INTERRUPT)	/* push XCS */
++	pushl $0			/* push EIP */
++
++	movl PER_CPU_VAR(unused), %ebp	/* restore %ebp */
++1:
++.endm
++
++.macro SWITCH_STACK_TO_KK_EXCEPTION
++	/* Check whether if we were in the kernel-user mode or not. */
++	cmpl $(TASK_SIZE), %esp
++	ja 1f
++
++	/*
++	 * We assume that the processor clears the High 16 bits of XCS.
++	 */
++
++	/*
++	 * We were in the kernel-user mode.
++	 * Therefore, %fs == __KERNEL_PERCPU && XCS == __KERNEL_CS.
++	 */
++	movl %ebp, 4(%esp)			/* save %ebp to the stack */
++	movl %esp, %ebp				/* save old %esp to %ebp */
++	movl PER_CPU_VAR(esp0), %esp		/* switch the stack! */
++
++	addl $12, %ebp
++
++	addl $-4, %esp			/* push XSS */
++	pushl %ebp			/* push old %esp */
++	pushl -4(%ebp)			/* push EFLAGS */
++	pushl $(__KU_CS_EXCEPTION)	/* push XCS */
++	pushl -12(%ebp)			/* push EIP */
++
++	movl -8(%ebp), %ebp		/* restore %ebp */
++1:
++.endm
++
++.macro SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
++	/* Check whether if we were in the kernel-user mode or not. */
++	cmpl $(TASK_SIZE), %esp
++	ja 1f
++
++	/*
++	 * We assume that the processor clears the High 16 bits of XCS.
++	 */
++
++	/*
++	 * We were in the kernel-user mode.
++	 * Therefore, %fs == __KERNEL_PERCPU && XCS == __KERNEL_CS.
++	 */
++	movl %ebp, 8(%esp)			/* save %ebp to the stack */
++	movl %esp, %ebp				/* save old %esp to %ebp */
++	movl PER_CPU_VAR(esp0), %esp		/* switch the stack! */
++
++	addl $16, %ebp
++
++	addl $-4, %esp			/* push XSS */
++	pushl %ebp			/* push old %esp */
++	pushl -4(%ebp)			/* push EFLAGS */
++	pushl $(__KU_CS_EXCEPTION)	/* push XCS */
++	pushl -12(%ebp)			/* push EIP */
++	pushl -16(%ebp)			/* push error_code */
++
++	movl -8(%ebp), %ebp		/* restore %ebp */
++1:
++.endm
++
++#endif
++
+ .macro RING0_INT_FRAME
+ 	CFI_STARTPROC simple
+ 	CFI_SIGNAL_FRAME
+@@ -379,6 +494,9 @@ ENTRY(ia32_sysenter_target)
+ 	CFI_DEF_CFA esp, 0
+ 	CFI_REGISTER esp, ebp
+ 	movl TSS_sysenter_sp0(%esp),%esp
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	.globl sysenter_past_esp
++#endif
+ sysenter_past_esp:
+ 	/*
+ 	 * Interrupts are disabled here, but we can't trace it until
+@@ -489,6 +607,7 @@ ENDPROC(ia32_sysenter_target)
+ 	# system call handler stub
+ ENTRY(system_call)
+ 	RING0_INT_FRAME			# can't unwind into user space anyway
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi %eax			# save orig_eax
+ 	SAVE_ALL
+@@ -529,6 +648,13 @@ restore_all_notrace:
+ #endif
+ restore_nocheck:
+ 	RESTORE_REGS 4			# skip orig_eax/error_code
++#ifdef CONFIG_KERNEL_MODE_LINUX
++restore_all_return:
++/* Switch stack KK -> KU. */
++	/* check whether if stack switch occured or not */
++	cmpw $0x0, 6(%esp)
++	jne ret_to_ku
++#endif
+ irq_return:
+ 	INTERRUPT_RETURN
+ .section .fixup,"ax"
+@@ -539,6 +665,109 @@ ENTRY(iret_exc)
+ .previous
+ 	_ASM_EXTABLE(irq_return,iret_exc)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++ENTRY(ret_to_ku)
++	ASM_STAC	
++	cmpl $__KU_CS_EXCEPTION, 4(%esp)
++	je ret_to_ku_from_exception
++	jmp ret_to_ku_from_interrupt
++
++/*
++ * The stack layout for ret_to_ku_from_interrupt:
++ *
++ * %esp --> 0
++ *          __KU_CS_INTERRUPT
++ *          0
++ *          ESP
++ *          XXX
++ *          ...
++ *
++ * ESP  --> EIP
++ *          CS
++ *          EFLAGS
++ */
++ENTRY(ret_to_ku_from_interrupt)
++	movl %eax, (%esp)	/* save %eax  */
++	movl %edx, 4(%esp)	/* save %edx */
++
++	movl 12(%esp), %eax	/* load ESP to %eax */
++
++	movl 8(%eax), %edx	/* load EFLAGS to %edx */
++	movl %edx, 4(%eax)
++	movl (%eax), %edx	/* load EIP to %edx */
++	movl %edx, 8(%eax)
++
++	movl 4(%esp), %edx	/* restore %edx */
++	movl (%esp), %eax	/* restore %eax */
++
++	movl 12(%esp), %esp	/* switch the stack! */
++	addl $4, %esp
++	popfl			/* restore EFLAGS */
++	ret
++
++/*
++ * The stack layout for ret_to_ku_from_exception:
++ *
++ * %esp --> EIP
++ *          __KU_CS_EXCEPTION
++ *          EFLAGS
++ *          ESP
++ *          XXX
++ *          ...
++ */
++ENTRY(ret_to_ku_from_exception)
++	movl $__KERNEL_CS, 4(%esp)	/* XCS = __KERNEL_CS */
++	pushl %ebp
++
++	/* check whether if we can skip iret or not */
++	movl 12(%esp), %ebp		/* load EFLAGS to %ebp */
++	testl $~(0x240fd7), %ebp
++	movl 16(%esp), %ebp		/* load ESP to %ebp */
++	jz skip_iret
++
++	addl $-16, %ebp
++ret_to_ku_mov_ebp:	popl (%ebp)		/* old EBP */
++ret_to_ku_mov_eip:	popl 4(%ebp)		/* EIP */
++ret_to_ku_mov_cs:	popl 8(%ebp)		/* XCS */
++ret_to_ku_mov_eflags:	popl 12(%ebp)		/* EFLAGS */
++			movl %ebp, %esp		/* switch the stack! */
++ret_to_ku_pop_ebp:	popl %ebp		/* %ebp = old EBP */
++ret_to_ku_iret:		INTERRUPT_RETURN
++
++.section __ex_table,"a"
++	.align 4
++	.long ret_to_ku_mov_ebp,	iret_exc
++	.long ret_to_ku_mov_eip,	iret_exc
++	.long ret_to_ku_mov_cs,		iret_exc
++	.long ret_to_ku_mov_eflags,	iret_exc
++	.long ret_to_ku_pop_ebp,	iret_exc
++	.long ret_to_ku_iret,		iret_exc
++.previous
++
++ENTRY(skip_iret)
++	addl $-12, %ebp
++skip_iret_mov_ebp:	popl (%ebp)		/* old EBP */
++skip_iret_mov_eip:	popl 8(%ebp)		/* EIP */
++			addl $4, %esp		/* skip CS */
++skip_iret_mov_eflags:	popl 4(%ebp)		/* EFLAGS */
++			movl %ebp, %esp		/* switch the stack! */
++skip_iret_pop_ebp:	popl %ebp		/* %ebp = old EBP */
++skip_iret_pop_eflags:	popfl
++skip_iret_ret:		ret
++
++.section __ex_table,"a"
++	.align 4
++	.long skip_iret_mov_ebp,	iret_exc
++	.long skip_iret_mov_eip,	iret_exc
++	.long skip_iret_mov_eflags,	iret_exc
++	.long skip_iret_pop_ebp,	iret_exc
++	.long skip_iret_pop_eflags,	iret_exc
++	.long skip_iret_ret,		iret_exc
++.previous
++
++#endif
++
+ #ifdef CONFIG_X86_ESPFIX32
+ 	CFI_RESTORE_STATE
+ ldt_ss:
+@@ -736,10 +965,11 @@ vector=FIRST_EXTERNAL_VECTOR
+ 	.balign 32
+   .rept	7
+     .if vector < FIRST_SYSTEM_VECTOR
++1:	SWITCH_STACK_TO_KK_INTERRUPT
+       .if vector <> FIRST_EXTERNAL_VECTOR
+ 	CFI_ADJUST_CFA_OFFSET -4
+       .endif
+-1:	pushl_cfi $(~vector+0x80)	/* Note: always in signed byte range */
++	pushl_cfi $(~vector+0x80)	/* Note: always in signed byte range */
+       .if ((vector-FIRST_EXTERNAL_VECTOR)%7) <> 6
+ 	jmp 2f
+       .endif
+@@ -776,6 +1006,7 @@ ENDPROC(common_interrupt)
+ #define BUILD_INTERRUPT3(name, nr, fn)	\
+ ENTRY(name)				\
+ 	RING0_INT_FRAME;		\
++	SWITCH_STACK_TO_KK_INTERRUPT;	\
+ 	ASM_CLAC;			\
+ 	pushl_cfi $~(nr);		\
+ 	SAVE_ALL;			\
+@@ -803,6 +1034,7 @@ ENDPROC(name)
+ 
+ ENTRY(coprocessor_error)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi $do_coprocessor_error
+@@ -812,6 +1044,7 @@ END(coprocessor_error)
+ 
+ ENTRY(simd_coprocessor_error)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ #ifdef CONFIG_X86_INVD_BUG
+@@ -834,6 +1067,7 @@ END(simd_coprocessor_error)
+ 
+ ENTRY(device_not_available)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $-1			# mark this as an int
+ 	pushl_cfi $do_device_not_available
+@@ -855,6 +1089,7 @@ END(native_irq_enable_sysexit)
+ 
+ ENTRY(overflow)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi $do_overflow
+@@ -864,6 +1099,7 @@ END(overflow)
+ 
+ ENTRY(bounds)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi $do_bounds
+@@ -873,6 +1109,7 @@ END(bounds)
+ 
+ ENTRY(invalid_op)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi $do_invalid_op
+@@ -882,6 +1119,7 @@ END(invalid_op)
+ 
+ ENTRY(coprocessor_segment_overrun)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi $do_coprocessor_segment_overrun
+@@ -889,8 +1127,146 @@ ENTRY(coprocessor_segment_overrun)
+ 	CFI_ENDPROC
+ END(coprocessor_segment_overrun)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++PAGE_FAULT_ERROR_CODE = 0x2
++TSS_ESP0   =  4
++TSS_EIP    = 32
++TSS_EFLAGS = 36
++TSS_CS     = 76
++TSS_ESP    = 56
++TSS_SS     = 80
++
++.macro kml_get_kernel_stack pre_tss, ret
++	cmpw $__KERNEL_CS, TSS_CS(\pre_tss)
++	jne 1f
++
++	movl TSS_ESP(\pre_tss), \ret
++	# If the previous ESP points to kernel-space,
++	# we used the kernel stack.
++	cmpl $TASK_SIZE, \ret
++	jbe 1f
++
++	# If we were in the first instruction of
++	# ia32_sysenter_target, the previous ESP points to
++	# tss->esp1, so we need to reset it to tss->esp0.
++	# EIP will be adjusted in task.c
++	cmpl $ia32_sysenter_target, TSS_EIP(\pre_tss)
++	jne 2f
++
++	# We used the user stack, so
++	# needs to load the kernel stack
++	# from ESP0 field of TSS.
++1:
++	movl PER_CPU_VAR(esp0), \ret
++/*
++	movl $(__KERNEL_PERCPU), %eax
++	movl %eax, %ds
++	movl (ESP0_IN_PDA), \ret
++	movl $(__USER_DS), %eax
++	movl %eax, %ds
++*/
++2:
++.endm
++
++.macro kml_recreate_kernel_stack_layout pre_tss
++	cmpw $__KERNEL_CS, TSS_CS(\pre_tss)
++	jne 1f
++
++	movl TSS_ESP(\pre_tss), %eax
++	cmpl $TASK_SIZE, %eax
++	ja 2f
++1:
++	pushl TSS_SS(\pre_tss)
++	pushl TSS_ESP(\pre_tss)
++2:
++	pushl TSS_EFLAGS(\pre_tss)
++	pushl TSS_CS(\pre_tss)
++	pushl TSS_EIP(\pre_tss)
++.endm
++
++.macro call_helper func target_address cur_tss pre_tss
++	pushl %esp
++	pushl \pre_tss
++	pushl \cur_tss
++	pushl \target_address 
++	call \func
++	addl $16, %esp
++.endm
++
++.macro ret_from_task_without_iret cur_tss tss_desc
++	/* clear NT in EFLAGS */
++	pushfl
++	andl $~X86_EFLAGS_NT, (%esp)
++	popfl
++
++	movl TSS_ESP0(\cur_tss), %esp
++
++	/* We don't use iret, because it will enable NMI */
++	ljmp $(\tss_desc*8), $0x0
++.endm
++
++/*
++ * This is a task-handler for double fault.
++ * In Kernel Mode Linux, user programs may be executed in ring 0 (kernel mode).
++ * Therefore, normal interrupt handling mechanism doesn't work.
++ * For example, if a page fault occurs in a stack,
++ * CPU cannot generate a page fault exception because there is no stack
++ * to save the CPU context. We call this problem "stack starvation".
++ * To solve the stack starvation, we handle double fault with task-handler. 
++ *
++ * Initial stack layout (dft_stack_struct)
++ *
++ * %esp --> error_code (<-- pushed by CPU)
++ *          pointer to dft_tss
++ *          pointer to normal_tss
++ */
++ENTRY(double_fault_task)
++	movl 4(%esp), %edi		# get current TSS.
++/* %edi = current_tss */
++	movl 8(%esp), %ebx		# get normal TSS.
++/* %ebx = prev_tss */
++
++	# get kernel stack.
++	kml_get_kernel_stack %ebx, %esi
++
++	movl %esi, %esp
++/* From now on, we can use stack. */
++
++	# recreate stack layout as if normal interrupt occurs.
++	kml_recreate_kernel_stack_layout %ebx
++
++	call_helper prepare_fault_handler, $double_fault_fixup, %edi, %ebx
++
++	ret_from_task_without_iret %edi, GDT_ENTRY_TSS
++
++	jmp double_fault_task
++
++ENTRY(double_fault_fixup)
++	pushl %eax
++	pushl %edx
++	pushl %ecx
++
++	movl %cr2, %eax
++	pushl %eax
++
++	call do_interrupt_handling
++
++	popl %eax
++	movl %eax, %cr2
++
++	popl %ecx
++	popl %edx
++	popl %eax
++
++	pushl $PAGE_FAULT_ERROR_CODE
++	pushl $do_page_fault
++	jmp error_code
++#endif
++
+ ENTRY(invalid_TSS)
+ 	RING0_EC_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
+ 	ASM_CLAC
+ 	pushl_cfi $do_invalid_TSS
+ 	jmp error_code
+@@ -899,6 +1275,7 @@ END(invalid_TSS)
+ 
+ ENTRY(segment_not_present)
+ 	RING0_EC_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
+ 	ASM_CLAC
+ 	pushl_cfi $do_segment_not_present
+ 	jmp error_code
+@@ -907,6 +1284,7 @@ END(segment_not_present)
+ 
+ ENTRY(stack_segment)
+ 	RING0_EC_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
+ 	ASM_CLAC
+ 	pushl_cfi $do_stack_segment
+ 	jmp error_code
+@@ -915,6 +1293,7 @@ END(stack_segment)
+ 
+ ENTRY(alignment_check)
+ 	RING0_EC_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
+ 	ASM_CLAC
+ 	pushl_cfi $do_alignment_check
+ 	jmp error_code
+@@ -923,6 +1302,7 @@ END(alignment_check)
+ 
+ ENTRY(divide_error)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0			# no error code
+ 	pushl_cfi $do_divide_error
+@@ -933,6 +1313,7 @@ END(divide_error)
+ #ifdef CONFIG_X86_MCE
+ ENTRY(machine_check)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi machine_check_vector
+@@ -943,6 +1324,7 @@ END(machine_check)
+ 
+ ENTRY(spurious_interrupt_bug)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $0
+ 	pushl_cfi $do_spurious_interrupt_bug
+@@ -1217,6 +1599,12 @@ return_to_handler:
+ 	jmp *%ecx
+ #endif
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++.pushsection .rodata,"a"
++#include "kml_syscall_table_32.S"
++.popsection
++#endif
++
+ #ifdef CONFIG_TRACING
+ ENTRY(trace_page_fault)
+ 	RING0_EC_FRAME
+@@ -1229,6 +1617,7 @@ END(trace_page_fault)
+ 
+ ENTRY(page_fault)
+ 	RING0_EC_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
+ 	ASM_CLAC
+ 	pushl_cfi $do_page_fault
+ 	ALIGN
+@@ -1317,6 +1706,117 @@ debug_stack_correct:
+ 	CFI_ENDPROC
+ END(debug)
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++/*
++ * Initial stack layout (nmi_stack_struct)
++ *
++ *          [ unused entry ] <-- used if NMI occurs in DF
++ * %esp --> pointer to nmi_tss
++ *          pointer to normal_tss
++ *          pointer to the descriptor of doublefault_tss
++ *          need_nmi flag
++ */
++ENTRY(nmi_task)
++	/* Check whether if we were in the double fault task or not. */
++	movl (%esp), %edi		# get current TSS.
++/* %edi = current_tss */
++	/* Load the previous tss selector to %ax */
++	movw (%edi), %ax
++	cmpw $__DOUBLEFAULT_TSS, %ax
++	jne 1f
++
++	/* We were in the double fault task. */
++	/*
++	 * Do not handle this NMI,
++	 * and notify the double fault task.
++	 */
++
++	/* clear busy flag in DFT tss descriptor */
++	movl 8(%esp), %edx
++	movl (%edx), %eax
++	andl $~0x00000200, %eax
++	movl %eax, (%edx)
++
++	movl $1, 12(%esp)		# need_nmi = 1
++
++	ret_from_task_without_iret %edi, GDT_ENTRY_DOUBLEFAULT_TSS
++
++	jmp nmi_task
++1:
++	/* We were in the normal task. */
++
++	movl 4(%esp), %ebx		# get normal TSS.
++/* %ebx = prev_tss */
++
++	# get kernel stack.
++	kml_get_kernel_stack %ebx, %esi
++
++	movl %esi, %esp
++/* From now on, we can use stack. */
++
++	# recreate stack layout as if normal interrupt occurs.
++	kml_recreate_kernel_stack_layout %ebx
++
++	# make room for %fs and %gs
++	addl $-8, %esp
++
++	call_helper prepare_nmi_handler, $nmi_fixup, %edi, %ebx
++
++	ret_from_task_without_iret %edi, GDT_ENTRY_TSS
++
++	jmp nmi_task
++
++.macro LLDT
++	pushl %eax
++	movl $(GDT_ENTRY_LDT * 8), %eax
++0:
++	lldtw %ax
++1:
++	popl %eax
++.section .fixup, "ax"
++2:
++	xorl %eax, %eax
++	lldtw %ax
++	jmp 1b
++.previous
++.section __ex_table,"a"
++	.align 4
++	.long 0b, 2b
++.previous
++.endm
++
++.macro POPSEG seg
++0:
++	popl \seg
++1:
++.section .fixup, "ax"
++2:
++	pushl $0
++	popl \seg
++	addl $4, %esp
++	jmp 1b
++.previous
++.section __ex_table,"a"
++	.align 4
++	.long 0b, 2b
++.previous
++.endm
++
++ENTRY(nmi_fixup)
++	pushfl
++	pushl $__KERNEL_CS
++	pushl $0f
++	jmp nmi
++0:
++	LLDT
++	POPSEG %gs
++	POPSEG %fs
++
++	jmp restore_all_return
++
++#endif
++
+ /*
+  * NMI is doubly nasty. It can happen _while_ we're handling
+  * a debug fault, and the debug fault hasn't yet been able to
+@@ -1402,6 +1902,7 @@ END(nmi)
+ 
+ ENTRY(int3)
+ 	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
+ 	ASM_CLAC
+ 	pushl_cfi $-1			# mark this as an int
+ 	SAVE_ALL
+@@ -1415,6 +1916,7 @@ END(int3)
+ 
+ ENTRY(general_protection)
+ 	RING0_EC_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION_WITH_ERROR_CODE
+ 	pushl_cfi $do_general_protection
+ 	jmp error_code
+ 	CFI_ENDPROC
+diff --git a/arch/x86/kernel/entry_64.S b/arch/x86/kernel/entry_64.S
+index f0095a7..e0582c3 100644
+--- a/arch/x86/kernel/entry_64.S
++++ b/arch/x86/kernel/entry_64.S
+@@ -91,6 +91,84 @@ ENDPROC(native_usergs_sysret64)
+ #endif
+ .endm
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
++
++#define KML_SWITCH_STACK
++#define KML_RESTORE_CS
++
++#else
++
++#define KML_SWITCH_STACK call kml_switch_stack
++#define KML_RESTORE_CS kml_restore_cs
++
++/* XXX : copy-and-pasted from "asm/processor.h" */
++#define TASK_SIZE       (0x800000000000)
++
++#define KML_RBP_RAX 0
++#define KML_RBP_RBP 8
++#define KML_RBP_RA 16
++#define KML_RBP_ERROR_CODE 24
++#define KML_RBP_RIP 32
++#define KML_RBP_CS 40
++#define KML_RBP_RFLAGS 48
++#define KML_RBP_RSP 56
++#define KML_RBP_SS 64
++
++#define KML_TSS_RSP0 4
++#define KML_STACK_SIZE (8*16)
++#define KML_RBP_TSS_RSP0 (KML_TSS_RSP0 - (TSS_kml_stack + KML_STACK_SIZE - (8*9)))
++
++ENTRY(kml_switch_stack)
++	pushq %rbp
++	pushq %rax
++	movq %rsp, %rbp
++
++	/* set %rsp and mark kernel-mode user process */
++
++	testq $0x03, KML_RBP_CS(%rbp)	# from user-mode?
++	jnz 2f
++
++	# from kernel-mode
++	movq $(TASK_SIZE), %rax
++	cmpq %rax, KML_RBP_RSP(%rbp)	# from kernel-mode user process?
++	jbe 1f
++
++	# from kernel context (align %rsp)
++	movq KML_RBP_RSP(%rbp), %rax
++	andq $~0x0f, %rax
++	movq %rax, %rsp
++	jmp 3f
++1:
++	# from kernel-mode user process
++	orl $0x7fff0003, KML_RBP_CS(%rbp)
++
++2:	# from user-mode
++	movq KML_RBP_TSS_RSP0(%rbp), %rsp
++3:
++	pushq KML_RBP_SS(%rbp)
++	pushq KML_RBP_RSP(%rbp)
++	pushq KML_RBP_RFLAGS(%rbp)
++	pushq KML_RBP_CS(%rbp)
++	pushq KML_RBP_RIP(%rbp)
++	pushq KML_RBP_ERROR_CODE(%rbp)
++	pushq KML_RBP_RA(%rbp)
++
++	movq KML_RBP_RAX(%rbp), %rax		# restore %rbp
++	movq KML_RBP_RBP(%rbp), %rbp		# restore %rbp
++
++	ret
++
++
++
++	.macro kml_restore_cs
++	testl $0x7fff0000, 8(%rsp)	# from kernel-mode user process?
++	jz 1f
++	andl $0x0000fffc, 8(%rsp)
++1:
++	.endm
++
++#endif
++	
+ /*
+  * When dynamic function tracer is enabled it will add a breakpoint
+  * to all locations that it is about to modify, sync CPUs, update
+@@ -141,8 +219,20 @@ ENDPROC(native_usergs_sysret64)
+ 	.macro FIXUP_TOP_OF_STACK tmp offset=0
+ 	movq PER_CPU_VAR(old_rsp),\tmp
+ 	movq \tmp,RSP+\offset(%rsp)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	GET_THREAD_INFO(\tmp)
++	bt $TIF_KU,TI_flags(\tmp)
++	jnc 1f
++	movq $__KERNEL_DS,SS+\offset(%rsp)
++	movq $__KU_CS,CS+\offset(%rsp)
++	jmp 2f
++1:
++#endif
+ 	movq $__USER_DS,SS+\offset(%rsp)
+ 	movq $__USER_CS,CS+\offset(%rsp)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++2:
++#endif
+ 	movq RIP+\offset(%rsp),\tmp  /* get rip */
+ 	movq \tmp,RCX+\offset(%rsp)  /* copy it to rcx as sysret would do */
+ 	movq R11+\offset(%rsp),\tmp  /* get eflags */
+@@ -321,6 +411,29 @@ END(ret_from_fork)
+  * with them due to bugs in both AMD and Intel CPUs.
+  */
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++ENTRY(kml_call_entry)
++	leaq	kml_call_entry_return(%rip),%rcx
++	pushf
++	popq	%r11
++	cli
++	jmp	kml_call
++kml_call_entry_retry:
++	.byte 0xeb
++	.byte 0xee
++	/* == jmpb kml_call_entry */
++kml_call_entry_return:
++	ret
++
++ENTRY(kml_call)
++	movq	%rsp,PER_CPU_VAR(old_rsp)
++	movq	PER_CPU_VAR(kernel_stack),%rsp
++
++	sti
++
++	jmp	system_call_sub
++#endif
++
+ ENTRY(system_call)
+ 	CFI_STARTPROC	simple
+ 	CFI_SIGNAL_FRAME
+@@ -342,6 +455,9 @@ GLOBAL(system_call_after_swapgs)
+ 	 * and short:
+ 	 */
+ 	ENABLE_INTERRUPTS(CLBR_NONE)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++system_call_sub:
++#endif
+ 	SAVE_ARGS 8, 0, rax_enosys=1
+ 	movq_cfi rax,(ORIG_RAX-ARGOFFSET)
+ 	movq  %rcx,RIP-ARGOFFSET(%rsp)
+@@ -384,6 +500,10 @@ ret_from_sys_call:
+ 	 * sysretq will re-enable interrupts:
+ 	 */
+ 	TRACE_IRQS_ON
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	bt	$TIF_KU,TI_flags+THREAD_INFO(%rsp,RIP-ARGOFFSET)
++	jc	sysret_ku
++#endif
+ 	movq RIP-ARGOFFSET(%rsp),%rcx
+ 	CFI_REGISTER	rip,rcx
+ 	RESTORE_ARGS 1,-ARG_SKIP,0
+@@ -393,6 +513,17 @@ ret_from_sys_call:
+ 
+ 	CFI_RESTORE_STATE
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++sysret_ku:
++	movq RIP-ARGOFFSET(%rsp),%rcx
++	RESTORE_ARGS 1,-ARG_SKIP,0
++	movq	PER_CPU_VAR(old_rsp), %rsp
++	/* swapgs is not needed */
++	pushq %r11
++	popfq
++	jmp *%rcx
++#endif
++
+ int_ret_from_sys_call_fixup:
+ 	FIXUP_TOP_OF_STACK %r11, -ARGOFFSET
+ 	jmp int_ret_from_sys_call_irqs_off
+@@ -669,6 +800,7 @@ END(interrupt)
+ 
+ /* 0(%rsp): ~(interrupt number) */
+ 	.macro interrupt func
++	KML_SWITCH_STACK
+ 	/* reserve pt_regs for scratch regs and rbp */
+ 	subq $ORIG_RAX-RBP, %rsp
+ 	CFI_ADJUST_CFA_OFFSET ORIG_RAX-RBP
+@@ -693,6 +825,10 @@ END(interrupt)
+ 	leaq -RBP(%rsp),%rdi	/* arg1 for handler */
+ 	testl $3, CS-RBP(%rsi)
+ 	je 1f
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	testl $0x7fff0000, CS(%rdi)
++	jnz 1f
++#endif
+ 	SWAPGS
+ 	/*
+ 	 * irq_count is used to check if a CPU is already on an interrupt stack
+@@ -765,6 +901,10 @@ retint_swapgs:		/* return to user-space */
+ 	 */
+ 	DISABLE_INTERRUPTS(CLBR_ANY)
+ 	TRACE_IRQS_IRETQ
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	testl $0x7fff0000, CS-ARGOFFSET(%rsp)
++	jnz restore_args
++#endif
+ 
+ 	/*
+ 	 * Try to use SYSRET instead of IRET if we're returning to
+@@ -844,6 +984,7 @@ retint_restore_args:	/* return to kernel space */
+ 	TRACE_IRQS_IRETQ
+ restore_args:
+ 	RESTORE_ARGS 1,8,1
++	KML_RESTORE_CS
+ 
+ irq_return:
+ 	INTERRUPT_RETURN
+@@ -1046,6 +1187,10 @@ ENTRY(\sym)
+ 	pushq_cfi $-1			/* ORIG_RAX: no syscall to restart */
+ 	.endif
+ 
++	.if \shift_ist == -1
++	KML_SWITCH_STACK
++	.endif
++
+ 	subq $ORIG_RAX-R15, %rsp
+ 	CFI_ADJUST_CFA_OFFSET ORIG_RAX-R15
+ 
+@@ -1054,6 +1199,16 @@ ENTRY(\sym)
+ 	CFI_REMEMBER_STATE
+ 	testl $3, CS(%rsp)		/* If coming from userspace, switch */
+ 	jnz 1f				/* stacks. */
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	pushq %rax
++	movq $(TASK_SIZE), %rax
++	cmpq %rax, RSP-8(%rsp)
++	popq %rax
++	ja 2f
++	orl $0x7fff0003, CS(%rsp)
++	jmp 1f
++2:
++#endif
+ 	.endif
+ 	call save_paranoid
+ 	.else
+@@ -1347,12 +1502,17 @@ ENTRY(paranoid_exit)
+ 	testl %ebx,%ebx				/* swapgs needed? */
+ 	jnz paranoid_restore
+ 	TRACE_IRQS_IRETQ 0
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	testl $0x7fff0000,CS(%rsp)
++	jnz   paranoid_restore
++#endif
+ 	SWAPGS_UNSAFE_STACK
+ 	RESTORE_ALL 8
+ 	INTERRUPT_RETURN
+ paranoid_restore:
+ 	TRACE_IRQS_IRETQ_DEBUG 0
+ 	RESTORE_ALL 8
++	KML_RESTORE_CS
+ 	INTERRUPT_RETURN
+ 	CFI_ENDPROC
+ END(paranoid_exit)
+@@ -1385,6 +1545,10 @@ ENTRY(error_entry)
+ 	testl $3,CS+8(%rsp)
+ 	je error_kernelspace
+ error_swapgs:
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	testl $0x7fff0000,CS+8(%rsp)
++	jnz error_sti
++#endif
+ 	SWAPGS
+ error_sti:
+ 	TRACE_IRQS_OFF
+diff --git a/arch/x86/kernel/head64.c b/arch/x86/kernel/head64.c
+index c4f8d46..4b9b0f2 100644
+--- a/arch/x86/kernel/head64.c
++++ b/arch/x86/kernel/head64.c
+@@ -167,7 +167,11 @@ asmlinkage __visible void __init x86_64_start_kernel(char * real_mode_data)
+ 	clear_bss();
+ 
+ 	for (i = 0; i < NUM_EXCEPTION_VECTORS; i++)
++#ifdef CONFIG_KERNEL_MODE_LINUX
++		set_intr_gate_orig(i, early_idt_handlers[i]);
++#else
+ 		set_intr_gate(i, early_idt_handlers[i]);
++#endif
+ 	load_idt((const struct desc_ptr *)&idt_descr);
+ 
+ 	copy_bootdata(__va(real_mode_data));
+diff --git a/arch/x86/kernel/i8259.c b/arch/x86/kernel/i8259.c
+index e7cc537..976d119 100644
+--- a/arch/x86/kernel/i8259.c
++++ b/arch/x86/kernel/i8259.c
+@@ -366,6 +366,44 @@ static void init_8259A(int auto_eoi)
+ 	raw_spin_unlock_irqrestore(&i8259A_lock, flags);
+ }
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++
++static inline unsigned long get_ISR(void)
++{
++	unsigned vl;
++	unsigned vh;
++
++	outb(0x0B, PIC_MASTER_CMD);
++	vl = inb(PIC_MASTER_CMD);
++	outb(0x0A, PIC_MASTER_CMD);
++
++	outb(0x0B, PIC_SLAVE_CMD);
++	vh = inb(PIC_SLAVE_CMD);
++	outb(0x0A, PIC_SLAVE_CMD);
++
++	return ((vh << 8) & 0x0000ff00) | (vl & 0x000000ff);
++}
++
++void i8259A_test_ISR_and_handle_interrupt(void)
++{
++	int i;
++	unsigned long isr;
++
++	isr = get_ISR();
++
++	for (i = 0; i < 16; i++) {
++		if (i == 2) {
++			continue;
++		}
++
++		if (isr & (1 << i)) {
++			handle_interrupt_manually(FIRST_EXTERNAL_VECTOR + i);
++		}
++	}
++}
++
++#endif
++
+ /*
+  * make i8259 a driver so that we can select pic functions at run time. the goal
+  * is to make x86 binary compatible among pc compatible and non-pc compatible
+diff --git a/arch/x86/kernel/irqinit.c b/arch/x86/kernel/irqinit.c
+index 70e181e..b74f250 100644
+--- a/arch/x86/kernel/irqinit.c
++++ b/arch/x86/kernel/irqinit.c
+@@ -158,6 +158,10 @@ static void __init apic_intr_init(void)
+ #endif
+ }
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++void i8259A_test_ISR_and_handle_interrupt(void);
++#endif
++
+ void __init native_init_IRQ(void)
+ {
+ 	int i;
+@@ -190,5 +194,10 @@ void __init native_init_IRQ(void)
+ 
+ #ifdef CONFIG_X86_32
+ 	irq_ctx_init(smp_processor_id());
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	test_ISR_and_handle_interrupt = i8259A_test_ISR_and_handle_interrupt;
++#endif
++
+ #endif
+ }
+diff --git a/arch/x86/kernel/kml_call_32.h b/arch/x86/kernel/kml_call_32.h
+new file mode 100644
+index 0000000..750ec70
+--- /dev/null
++++ b/arch/x86/kernel/kml_call_32.h
+@@ -0,0 +1,157 @@
++/*
++ * Copyright 2003 Toshiyuki Maeda
++ *
++ * This file is part of Kernel Mode Linux.
++ *
++ * Kernel Mode Linux is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2, or (at your option)
++ * any later version.
++ *
++ * Kernel Mode Linux is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++/*
++ * These are macros for making kml_call_table.
++ *
++ * This file should be included only from the "sys_call_table_maker.h" file.
++ */
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++.macro kml_push_args argnum
++.ifeq \argnum
++addl $-4, %esp
++.endif
++.ifeq \argnum - 1
++pushl %ebx
++.endif
++.ifeq \argnum - 2
++pushl %ecx
++kml_push_args 1
++.endif
++.ifeq \argnum - 3
++pushl %edx
++kml_push_args 2
++.endif
++.ifeq \argnum - 4
++pushl %esi
++kml_push_args 3
++.endif
++.ifeq \argnum - 5
++pushl %edi
++kml_push_args 4
++.endif
++.ifeq \argnum - 6
++pushl (%ebp)
++kml_push_args 5
++.endif
++.endm
++
++#define MAKE_KMLCALL(entry, argnum, syscall_num) \
++.ifndef kml_ ## argnum; \
++.text; \
++ENTRY(kml_ ## argnum); \
++	pushl %eax; \
++	pushl %edx; \
++	pushl %ecx; \
++	pushl %ebp; \
++	movl %esp, %ebp; \
++	movl PER_CPU_VAR(esp0), %esp; \
++\
++	kml_push_args argnum; \
++\
++	leal sys_call_table(,%eax,4), %ecx; \
++	call *(%ecx); \
++\
++	GET_THREAD_INFO(%edx); \
++	leave; \
++\
++	movl TI_flags(%edx), %ecx; \
++	testl $_TIF_ALLWORK_MASK, %ecx; \
++	popl %ecx; \
++	popl %edx; \
++	jne 0f; \
++	addl $4, %esp; \
++	ret; \
++0:; \
++	pushl %ecx; \
++	movl 4(%esp), %ecx; \
++	movl %eax, 4(%esp); \
++	movl %ecx, %eax; \
++	popl %ecx; \
++	pushfl; \
++	pushl %cs; \
++	pushl $kml_wrapper_int_post; \
++	jmp kml_exit_work; \
++.endif; \
++kml_ ## entry = kml_ ## argnum
++
++#define MAKE_KMLCALL_SPECIAL(entry, argnum, syscall_num) \
++kml_ ## entry = kml_special
++
++ENTRY(kml_special)
++	add $-4, %esp
++	pushfl
++	pushl %cs
++	pushl $kml_wrapper_int_post
++	jmp system_call
++
++/* generic routines for kml call's exit */
++ENTRY(kml_exit_work)
++	RING0_INT_FRAME
++	SWITCH_STACK_TO_KK_EXCEPTION
++
++	pushl %eax
++	CFI_ADJUST_CFA_OFFSET 4
++	SAVE_ALL
++
++	movl PT_OLDESP(%esp), %eax
++	movl (%eax), %eax
++	movl %eax,PT_EAX(%esp)             # store the return value
++
++	GET_THREAD_INFO(%ebp)
++	jmp syscall_exit
++	CFI_ENDPROC
++
++kml_wrapper_int_pre:
++	int $0x80
++kml_wrapper_int_post:
++	addl $4, %esp
++	ret
++
++ENTRY(kml_sigreturn_shortcut)
++	popl %eax
++	movl $119, %eax		# 119 == __NR_sigreturn
++	jmp return_wrapper
++
++ENTRY(kml_rt_sigreturn_shortcut)
++	movl $173, %eax		# 173 == __NR_rt_sigreturn
++return_wrapper:
++	movl %fs, %edx
++	movl $__KERNEL_PERCPU, %ecx
++	movl %ecx, %fs
++	movl %esp, %ecx
++	movl PER_CPU_VAR(esp0), %esp
++	movl %edx, %fs
++
++	addl $-4, %esp			# XSS
++	pushl %ecx			# ESP
++	pushfl				# EFLAGS
++	pushl $(__KU_CS_EXCEPTION)	# XCS
++	addl $-4, %esp			# EIP
++
++	pushl %eax			# orig_eax
++	addl $-44, %esp			# SAVE_ALL
++
++	GET_THREAD_INFO(%ebp)
++	jmp syscall_call
++
++#endif
+diff --git a/arch/x86/kernel/kml_syscall_table_32.sh b/arch/x86/kernel/kml_syscall_table_32.sh
+new file mode 100644
+index 0000000..67d88f8
+--- /dev/null
++++ b/arch/x86/kernel/kml_syscall_table_32.sh
+@@ -0,0 +1,28 @@
++#!/bin/sh
++
++in="$1"
++out="$2"
++
++grep '^[0-9]' "$in" | sort -n | (
++    echo "#include \"kml_syscall_table_maker_32.h\""
++    echo "SYSCALL_TABLE_BEGIN"
++
++    while read nr abi name num_args req_ptregs entry compat; do
++	if [ -z "$req_ptregs" ]; then
++	    echo "SYSCALL_ENTRY($nr, $name, 0, sys_ni_syscall, sys_ni_syscall)"
++	else
++	    if [ "$req_ptregs" = "0" ]; then
++		entry_macro="SYSCALL_ENTRY"
++	    else
++		entry_macro="SYSCALL_ENTRY_SPECIAL"
++	    fi
++
++	    if [ -n "$compat" ]; then
++		echo "$entry_macro($nr, $name, $num_args, $entry, $compat)"
++	    elif [ -n "$entry" ]; then
++		echo "$entry_macro($nr, $name, $num_args, $entry, $entry)"
++	    fi
++
++	fi
++    done
++) > "$out"
+diff --git a/arch/x86/kernel/kml_syscall_table_maker_32.h b/arch/x86/kernel/kml_syscall_table_maker_32.h
+new file mode 100644
+index 0000000..8431f54
+--- /dev/null
++++ b/arch/x86/kernel/kml_syscall_table_maker_32.h
+@@ -0,0 +1,69 @@
++/*
++ * Copyright 2002 Toshiyuki Maeda
++ *
++ * This file is part of Kernel Mode Linux.
++ *
++ * Kernel Mode Linux is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2, or (at your option)
++ * any later version.
++ *
++ * Kernel Mode Linux is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++/*
++ * These are macros for making kml_call_table and direct_call_table.
++ *
++ * This file should be included only from the "kml_call_table_32.h" file.
++ */
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++
++#include "kml_call_32.h"
++#include "direct_call_32.h"
++
++#define SYSCALL_TABLE_BEGIN \
++.data 0; \
++ENTRY(kml_call_table); \
++.data 1; \
++ENTRY(direct_call_table); \
++.data 0;
++
++/*
++ * entry.S is compiled with the "-traditional" option.
++ * So, we perform an old-style concatenation instead of '##'!
++ */
++#define SYSCALL_ENTRY(nr,name,argnum,entry,compat) \
++.ifndef kml_ ## entry; \
++MAKE_KMLCALL(entry,argnum,nr); \
++.endif; \
++.data 0; \
++.long kml_ ## entry; \
++.ifndef direct_ ## entry; \
++MAKE_DIRECTCALL(entry,argnum,nr); \
++.endif; \
++.data 1; \
++.long direct_ ## entry; \
++.data 0;
++
++#define SYSCALL_ENTRY_SPECIAL(nr,name,argnum,entry,compat) \
++.ifndef kml_ ## entry; \
++MAKE_KMLCALL_SPECIAL(entry,argnum,nr); \
++.endif; \
++.data 0; \
++.long kml_ ## entry; \
++.ifndef direct_ ## entry; \
++MAKE_DIRECTCALL_SPECIAL(entry,argnum,nr); \
++.endif; \
++.data 1; \
++.long direct_ ## entry; \
++.data 0;
++
++#endif
+diff --git a/arch/x86/kernel/process_32.c b/arch/x86/kernel/process_32.c
+index 603c4f9..14fb275 100644
+--- a/arch/x86/kernel/process_32.c
++++ b/arch/x86/kernel/process_32.c
+@@ -211,9 +211,42 @@ start_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
+ 	 * some work pending.
+ 	 */
+ 	set_thread_flag(TIF_NOTIFY_RESUME);
++
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	clear_thread_flag(TIF_KU);
++#endif
+ }
+ EXPORT_SYMBOL_GPL(start_thread);
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++void
++start_kernel_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
++{
++	set_user_gs(regs, 0);
++	regs->fs		= __KERNEL_PERCPU;
++	set_fs(KERNEL_DS);
++	regs->ds		= __USER_DS;
++	regs->es		= __USER_DS;
++	regs->ss		= __KERNEL_DS;
++	regs->cs		= __KU_CS_EXCEPTION;
++	regs->ip		= new_ip;
++	regs->sp		= new_sp;
++	regs->flags		= X86_EFLAGS_IF;
++
++	if (cpu_has_smap) {
++		regs->flags	|= X86_EFLAGS_AC;
++	}
++
++	/*
++	 * force it to the iret return path by making it look as if there was
++	 * some work pending.
++	 */
++	set_thread_flag(TIF_NOTIFY_RESUME);
++
++	set_thread_flag(TIF_KU);
++}
++EXPORT_SYMBOL_GPL(start_kernel_thread);
++#endif
+ 
+ /*
+  *	switch_to(x,y) should switch tasks from x to y.
+@@ -260,6 +293,7 @@ __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+ 	 */
+ 	load_sp0(tss, next);
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	/*
+ 	 * Save away %gs. No need to save %fs, as it was saved on the
+ 	 * stack on entry.  No need to save %es and %ds, as those are
+@@ -271,11 +305,12 @@ __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+ 	 * running inside of a hypervisor layer.
+ 	 */
+ 	lazy_save_gs(prev->gs);
++#endif
+ 
+ 	/*
+ 	 * Load the per-thread Thread-Local Storage descriptor.
+ 	 */
+-	load_TLS(next, cpu);
++	load_TLS__nmi_unsafe(next, cpu);
+ 
+ 	/*
+ 	 * Restore IOPL if needed.  In normal use, the flags restore
+diff --git a/arch/x86/kernel/process_64.c b/arch/x86/kernel/process_64.c
+index 67fcc43..4909b8f 100644
+--- a/arch/x86/kernel/process_64.c
++++ b/arch/x86/kernel/process_64.c
+@@ -242,6 +242,9 @@ start_thread_common(struct pt_regs *regs, unsigned long new_ip,
+ 	regs->cs		= _cs;
+ 	regs->ss		= _ss;
+ 	regs->flags		= X86_EFLAGS_IF;
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	clear_thread_flag(TIF_KU);
++#endif
+ }
+ 
+ void
+@@ -261,6 +264,34 @@ void start_thread_ia32(struct pt_regs *regs, u32 new_ip, u32 new_sp)
+ }
+ #endif
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++void
++start_kernel_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
++{
++	int cpu = smp_processor_id();
++        loadsegment(fs, 0);
++        loadsegment(es, 0);
++        loadsegment(ds, 0);
++	load_gs_index(0);
++	current->thread.usersp	= new_sp;
++	regs->ip		= new_ip;
++	regs->sp		= new_sp;
++	this_cpu_write(old_rsp, new_sp);
++	regs->cs		= __KU_CS;
++	regs->ss		= __KERNEL_DS;
++	regs->flags		= X86_EFLAGS_IF;
++
++        if (cpu_has_smap) {
++                regs->flags     |= X86_EFLAGS_AC;
++        }
++
++	set_fs(KERNEL_DS);
++	set_thread_flag(TIF_KU);
++	wrmsrl(MSR_KERNEL_GS_BASE, (unsigned long)per_cpu(irq_stack_union.gs_base, cpu));
++}
++EXPORT_SYMBOL_GPL(start_kernel_thread);
++#endif
++
+ /*
+  *	switch_to(x,y) should switch tasks from x to y.
+  *
+@@ -392,6 +423,11 @@ __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+ 		if (gsindex)
+ 			prev->gs = 0;
+ 	}
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	if (test_ti_thread_flag(task_thread_info(next_p), TIF_KU)) {
++		next->gs = (unsigned long)per_cpu(irq_stack_union.gs_base, cpu);
++	}
++#endif
+ 	if (next->gs)
+ 		wrmsrl(MSR_KERNEL_GS_BASE, next->gs);
+ 	prev->gsindex = gsindex;
+diff --git a/arch/x86/kernel/signal.c b/arch/x86/kernel/signal.c
+index e504246..3d2e437 100644
+--- a/arch/x86/kernel/signal.c
++++ b/arch/x86/kernel/signal.c
+@@ -57,10 +57,49 @@
+ 	regs->seg = GET_SEG(seg);			\
+ } while (0)
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
++
+ #define COPY_SEG_CPL3(seg)	do {			\
+ 	regs->seg = GET_SEG(seg) | 3;			\
+ } while (0)
+ 
++#define COPY_CS_CPL3 COPY_SEG_CPL3(cs)
++#define COPY_SS_CPL3 COPY_SEG_CPL3(ss)
++
++#else /* !CONFIG_KERNEL_MODE_LINUX */
++
++#ifdef CONFIG_X86_32
++
++#define COPY_CS_CPL3	do {				\
++	unsigned long tmp;				\
++	unsigned long mask;				\
++	get_user_ex(tmp, &sc->xcs);			\
++	mask = (regs->cs == __KU_CS_EXCEPTION) ? 0 : (regs->cs & 3);	\
++	regs->cs = tmp | mask;				\
++} while (0)
++
++#define COPY_SS_CPL3	do {				\
++	unsigned short tmp;				\
++	unsigned long mask;				\
++	get_user_ex(tmp, &sc->ss);			\
++	mask = (regs->cs == __KU_CS_EXCEPTION) ? 0 : (regs->cs & 3);	\
++	regs->ss = tmp | mask;				\
++} while (0)
++
++#else /* !CONFIG_X86_32 */
++
++#define COPY_CS_CPL3 do {				\
++	if (test_thread_flag(TIF_KU)) {			\
++		regs->cs = __KU_CS;			\
++	} else {					\
++		regs->cs = GET_SEG(cs) | 3;		\
++	}						\
++} while (0)
++
++#endif
++
++#endif
++
+ int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc,
+ 		       unsigned long *pax)
+ {
+@@ -95,13 +134,13 @@ int restore_sigcontext(struct pt_regs *regs, struct sigcontext __user *sc,
+ #endif /* CONFIG_X86_64 */
+ 
+ #ifdef CONFIG_X86_32
+-		COPY_SEG_CPL3(cs);
+-		COPY_SEG_CPL3(ss);
++		COPY_CS_CPL3;
++		COPY_SS_CPL3;
+ #else /* !CONFIG_X86_32 */
+ 		/* Kernel saves and restores only the CS segment register on signals,
+ 		 * which is the bare minimum needed to allow mixed 32/64-bit code.
+ 		 * App's signal handler can save/restore other segments if needed. */
+-		COPY_SEG_CPL3(cs);
++		COPY_CS_CPL3;
+ #endif /* CONFIG_X86_32 */
+ 
+ 		get_user_ex(tmpflags, &sc->flags);
+@@ -155,7 +194,11 @@ int setup_sigcontext(struct sigcontext __user *sc, void __user *fpstate,
+ 		put_user_ex(current->thread.error_code, &sc->err);
+ 		put_user_ex(regs->ip, &sc->ip);
+ #ifdef CONFIG_X86_32
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 		put_user_ex(regs->cs, (unsigned int __user *)&sc->cs);
++#else
++		put_user_ex(regs->cs, &sc->xcs);
++#endif
+ 		put_user_ex(regs->flags, &sc->flags);
+ 		put_user_ex(regs->sp, &sc->sp_at_signal);
+ 		put_user_ex(regs->ss, (unsigned int __user *)&sc->ss);
+@@ -218,6 +261,9 @@ get_sigframe(struct k_sigaction *ka, struct pt_regs *regs, size_t frame_size,
+ 				sp = current->sas_ss_sp + current->sas_ss_size;
+ 		} else if (config_enabled(CONFIG_X86_32) &&
+ 			   (regs->ss & 0xffff) != __USER_DS &&
++#ifdef CONFIG_KERNEL_MODE_LINUX
++			   (regs->sp > TASK_SIZE) &&
++#endif
+ 			   !(ka->sa.sa_flags & SA_RESTORER) &&
+ 			   ka->sa.sa_restorer) {
+ 				/* This is the legacy signal stack switching. */
+@@ -271,6 +317,11 @@ static const struct {
+ 	0
+ };
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++extern void kml_sigreturn_shortcut(void);
++extern void kml_rt_sigreturn_shortcut(void);
++#endif
++
+ static int
+ __setup_frame(int sig, struct ksignal *ksig, sigset_t *set,
+ 	      struct pt_regs *regs)
+@@ -302,7 +353,16 @@ __setup_frame(int sig, struct ksignal *ksig, sigset_t *set,
+ 			selected_vdso32->sym___kernel_sigreturn;
+ 	else
+ 		restorer = &frame->retcode;
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	if (kernel_mode_user_process(regs->cs)) {
++		restorer = (void *) kml_sigreturn_shortcut;
++	}
++#endif
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	if (ksig->ka.sa.sa_flags & SA_RESTORER)
++#else
++	if ((ksig->ka.sa.sa_flags & SA_RESTORER) && (!kernel_mode_user_process(regs->cs)))
++#endif
+ 		restorer = ksig->ka.sa.sa_restorer;
+ 
+ 	/* Set up to return from userspace.  */
+@@ -327,10 +387,26 @@ __setup_frame(int sig, struct ksignal *ksig, sigset_t *set,
+ 	regs->dx = 0;
+ 	regs->cx = 0;
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	regs->ds = __USER_DS;
+ 	regs->es = __USER_DS;
+ 	regs->ss = __USER_DS;
+ 	regs->cs = __USER_CS;
++#else
++	if (kernel_mode_user_process(regs->cs)) {
++		set_fs(KERNEL_DS);
++		regs->ds = __USER_DS;
++		regs->es = __USER_DS;
++		regs->ss = __KERNEL_DS;
++		regs->cs = __KU_CS_EXCEPTION;
++	} else {
++		set_fs(USER_DS);
++		regs->ds = __USER_DS;
++		regs->es = __USER_DS;
++		regs->ss = __USER_DS;
++		regs->cs = __USER_CS;
++	}
++#endif
+ 
+ 	return 0;
+ }
+@@ -362,9 +438,22 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
+ 		save_altstack_ex(&frame->uc.uc_stack, regs->sp);
+ 
+ 		/* Set up to return from userspace.  */
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 		restorer = current->mm->context.vdso +
+ 			selected_vdso32->sym___kernel_rt_sigreturn;
++#else
++		if (!kernel_mode_user_process(regs->cs)) {
++			restorer = current->mm->context.vdso +
++				selected_vdso32->sym___kernel_rt_sigreturn;
++		} else {
++			restorer = (void *) kml_rt_sigreturn_shortcut;
++		}
++#endif
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 		if (ksig->ka.sa.sa_flags & SA_RESTORER)
++#else
++		if ((ksig->ka.sa.sa_flags & SA_RESTORER) && (!kernel_mode_user_process(regs->cs)))
++#endif
+ 			restorer = ksig->ka.sa.sa_restorer;
+ 		put_user_ex(restorer, &frame->pretcode);
+ 
+@@ -393,10 +482,26 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
+ 	regs->dx = (unsigned long)&frame->info;
+ 	regs->cx = (unsigned long)&frame->uc;
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	regs->ds = __USER_DS;
+ 	regs->es = __USER_DS;
+ 	regs->ss = __USER_DS;
+ 	regs->cs = __USER_CS;
++#else
++	if (kernel_mode_user_process(regs->cs)) {
++		set_fs(KERNEL_DS);
++		regs->ds = __USER_DS;
++		regs->es = __USER_DS;
++		regs->ss = __KERNEL_DS;
++		regs->cs = __KU_CS_EXCEPTION;
++	} else {
++		set_fs(USER_DS);
++		regs->ds = __USER_DS;
++		regs->es = __USER_DS;
++		regs->ss = __USER_DS;
++		regs->cs = __USER_CS;
++	}
++#endif
+ 
+ 	return 0;
+ }
+@@ -459,7 +564,11 @@ static int __setup_rt_frame(int sig, struct ksignal *ksig,
+ 
+ 	/* Set up the CS register to run signal handlers in 64-bit mode,
+ 	   even if the handler happens to be interrupting 32-bit code. */
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	regs->cs = __USER_CS;
++#else
++	regs->cs = test_thread_flag(TIF_KU) ? __KU_CS : __USER_CS;
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/arch/x86/kernel/task.c b/arch/x86/kernel/task.c
+new file mode 100644
+index 0000000..7eaec65
+--- /dev/null
++++ b/arch/x86/kernel/task.c
+@@ -0,0 +1,201 @@
++/*
++ * Copyright 2004 Toshiyuki Maeda
++ *
++ * This file is part of Kernel Mode Linux.
++ *
++ * Kernel Mode Linux is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2, or (at your option)
++ * any later version.
++ *
++ * Kernel Mode Linux is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
++ */
++
++#ifdef CONFIG_X86_32
++
++#include <linux/init.h>
++#include <linux/percpu.h>
++#include <asm/desc.h>
++#include <asm/processor.h>
++
++extern void nmi_task(void);
++extern void double_fault_task(void);
++
++#define INIT_DFT {						\
++	.x86_tss = {						\
++		.ss0		= __KERNEL_DS,			\
++		.ldt		= 0,				\
++		.fs		= __KERNEL_PERCPU,		\
++		.gs		= 0,				\
++		.io_bitmap_base	= INVALID_IO_BITMAP_OFFSET,	\
++		.ip		= (unsigned long) double_fault_task,	\
++		.flags		= X86_EFLAGS_SF | 0x2,		\
++		.es		= __USER_DS,			\
++		.cs		= __KERNEL_CS,			\
++		.ss		= __KERNEL_DS,			\
++		.ds		= __USER_DS			\
++	}							\
++}
++
++#define INIT_NMIT {						\
++	.x86_tss = {						\
++		.ss0		= __KERNEL_DS,			\
++		.ldt		= 0,				\
++		.fs		= __KERNEL_PERCPU,		\
++		.gs		= 0,				\
++		.io_bitmap_base	= INVALID_IO_BITMAP_OFFSET,	\
++		.ip		= (unsigned long) nmi_task,	\
++		.flags		= X86_EFLAGS_SF | 0x2,		\
++		.es		= __USER_DS,			\
++		.cs		= __KERNEL_CS,			\
++		.ss		= __KERNEL_DS,			\
++		.ds		= __USER_DS			\
++	}							\
++}
++
++DEFINE_PER_CPU(struct tss_struct, nmi_tsses) = INIT_NMIT;
++DEFINE_PER_CPU(struct tss_struct, doublefault_tsses) = INIT_DFT;
++
++DEFINE_PER_CPU(struct nmi_stack_struct, nmi_stacks);
++DEFINE_PER_CPU(struct dft_stack_struct, dft_stacks);
++
++DEFINE_PER_CPU(unsigned long, esp0);
++DEFINE_PER_CPU(unsigned long, unused);
++
++struct df_stk {
++	unsigned long ip;
++	unsigned long cs;
++	unsigned long flags;
++};
++
++struct nmi_stk {
++	unsigned long gs;
++	unsigned long fs;
++	struct df_stk stk;
++};
++
++asmlinkage void prepare_fault_handler(unsigned long target_ip,
++				      struct tss_struct* cur, struct tss_struct* pre, struct df_stk* stk)
++{
++	unsigned int cpu = smp_processor_id();
++
++	clear_busy_flag_in_tss_descriptor(cpu);
++
++	stk->cs &= 0x0000ffff;
++
++	if (pre->x86_tss.cs == __KERNEL_CS && pre->x86_tss.sp <= TASK_SIZE) {
++		stk->cs = __KU_CS_EXCEPTION;
++	}
++
++	pre->x86_tss.ip = target_ip;
++	pre->x86_tss.cs = __KERNEL_CS;
++	pre->x86_tss.flags &= (~(X86_EFLAGS_TF | X86_EFLAGS_IF));
++
++	pre->x86_tss.sp = (unsigned long)stk;
++	pre->x86_tss.ss = __KERNEL_DS;
++
++	return;
++}
++
++extern void ia32_sysenter_target(void);
++extern void sysenter_past_esp(void);
++
++asmlinkage void prepare_nmi_handler(unsigned long target_ip,
++				    struct tss_struct* cur, struct tss_struct* pre, struct nmi_stk* stk)
++{
++	prepare_fault_handler(target_ip, cur, pre, &stk->stk);
++
++	/*
++	 * NOTE: it is unnecessary to set cs to __KU_CS_INTERRUPT
++	 * because the layout of the prepared kernel stack (in entry.S) is
++	 * for exceptions, not interrupts.
++	 */
++
++	stk->fs = pre->x86_tss.fs;
++	stk->gs = pre->x86_tss.gs;
++
++	pre->x86_tss.fs = 0;
++	pre->x86_tss.gs = 0;
++	pre->x86_tss.ldt = 0;
++
++	pre->x86_tss.sp = (unsigned long)stk;
++
++	/*
++	 * Skip the first instruction of ia32_sysenter_target because
++	 * it assumes that %esp points to tss->esp1
++	 * and just loads the correct kernel stack to %esp.
++	 */
++	if (stk->stk.ip == (unsigned long)ia32_sysenter_target) {
++		stk->stk.ip = (unsigned long)sysenter_past_esp;
++	}
++
++	return;
++}
++
++void __cpuinit init_doublefault_tss(int cpu)
++{
++	struct tss_struct* tss = &per_cpu(init_tss, cpu);
++	struct tss_struct* doublefault_tss = &per_cpu(doublefault_tsses, cpu);
++	struct dft_stack_struct* dft_stack = &per_cpu(dft_stacks, cpu);
++
++	doublefault_tss->x86_tss.sp = (unsigned long)(&(dft_stack->error_code) + 1);
++	doublefault_tss->x86_tss.sp0 = doublefault_tss->x86_tss.sp;
++
++	dft_stack->this_tss = doublefault_tss;
++	dft_stack->normal_tss = tss;
++
++}
++
++void __cpuinit init_nmi_tss(int cpu)
++{
++	struct tss_struct* tss = &per_cpu(init_tss, cpu);
++	struct tss_struct* nmi_tss = &per_cpu(nmi_tsses, cpu);
++	struct nmi_stack_struct* nmi_stack = &per_cpu(nmi_stacks, cpu);
++
++	nmi_tss->x86_tss.sp = (unsigned long)(&(nmi_stack->__pad[0]) + 1);
++	nmi_tss->x86_tss.sp0 = nmi_tss->x86_tss.sp;
++
++	nmi_stack->this_tss = nmi_tss;
++	nmi_stack->normal_tss = tss;
++	nmi_stack->dft_tss_desc = &get_cpu_gdt_table(cpu)[GDT_ENTRY_DOUBLEFAULT_TSS].b;
++	nmi_stack->need_nmi = 0;
++
++}
++
++static int NMI_is_set(void) {
++	unsigned int cpu = smp_processor_id();
++
++	if (per_cpu(nmi_stacks, cpu).need_nmi) {
++		per_cpu(nmi_stacks, cpu).need_nmi = 0;
++		return 1;
++	}
++
++	return 0;
++}
++
++void (*test_ISR_and_handle_interrupt)(void);
++
++asmlinkage void do_interrupt_handling(void)
++{
++	if (NMI_is_set()) {
++		__asm__ __volatile__ (
++		"pushfl\n\t"
++		"pushl %0\n\t"
++		"pushl $0f\n\t"
++		"jmp nmi\n\t"
++		"0:\n\t"
++		: : "i" (__KERNEL_CS)
++		);
++	}
++
++	test_ISR_and_handle_interrupt();
++}
++
++#endif
+diff --git a/arch/x86/kernel/tls.c b/arch/x86/kernel/tls.c
+index 7fc5e84..39b9cb2 100644
+--- a/arch/x86/kernel/tls.c
++++ b/arch/x86/kernel/tls.c
+@@ -85,12 +85,15 @@ static void set_tls_desc(struct task_struct *p, int idx,
+ 	struct thread_struct *t = &p->thread;
+ 	struct desc_struct *desc = &t->tls_array[idx - GDT_ENTRY_TLS_MIN];
+ 	int cpu;
++	NMI_DECLS_GS
+ 
+ 	/*
+ 	 * We must not get preempted while modifying the TLS.
+ 	 */
+ 	cpu = get_cpu();
+ 
++	NMI_SAVE_GS;
++
+ 	while (n-- > 0) {
+ 		if (LDT_empty(info) || LDT_zero(info))
+ 			desc->a = desc->b = 0;
+@@ -101,7 +104,9 @@ static void set_tls_desc(struct task_struct *p, int idx,
+ 	}
+ 
+ 	if (t == &current->thread)
+-		load_TLS(t, cpu);
++		load_TLS__nmi_unsafe(t, cpu);
++
++	NMI_RESTORE_GS;
+ 
+ 	put_cpu();
+ }
+diff --git a/arch/x86/kernel/traps.c b/arch/x86/kernel/traps.c
+index 4ff5d16..4ee8123 100644
+--- a/arch/x86/kernel/traps.c
++++ b/arch/x86/kernel/traps.c
+@@ -954,7 +954,11 @@ void __init trap_init(void)
+ #endif
+ 
+ 	set_intr_gate(X86_TRAP_DE, divide_error);
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++	set_task_gate(X86_TRAP_NMI, GDT_ENTRY_NMI_TSS);
++#else
+ 	set_intr_gate_ist(X86_TRAP_NMI, &nmi, NMI_STACK);
++#endif
+ 	/* int4 can be called from all */
+ 	set_system_intr_gate(X86_TRAP_OF, &overflow);
+ 	set_intr_gate(X86_TRAP_BR, bounds);
+@@ -983,7 +987,11 @@ void __init trap_init(void)
+ 		set_bit(i, used_vectors);
+ 
+ #ifdef CONFIG_IA32_EMULATION
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_64)
++	set_system_intr_gate_orig(IA32_SYSCALL_VECTOR, ia32_syscall);
++#else
+ 	set_system_intr_gate(IA32_SYSCALL_VECTOR, ia32_syscall);
++#endif
+ 	set_bit(IA32_SYSCALL_VECTOR, used_vectors);
+ #endif
+ 
+diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+index ede025f..1cc3349 100644
+--- a/arch/x86/mm/fault.c
++++ b/arch/x86/mm/fault.c
+@@ -1063,6 +1063,11 @@ __do_page_fault(struct pt_regs *regs, unsigned long error_code,
+ 	tsk = current;
+ 	mm = tsk->mm;
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	if (need_error_code_fix_on_page_fault(regs->cs))
++		error_code |= 0x4;
++#endif
++
+ 	/*
+ 	 * Detect and handle instructions that would cause a page fault for
+ 	 * both a tracked kernel page and a userspace page.
+diff --git a/arch/x86/syscalls/syscall_32.tbl b/arch/x86/syscalls/syscall_32.tbl
+index b3560ec..2ddd8a3 100644
+--- a/arch/x86/syscalls/syscall_32.tbl
++++ b/arch/x86/syscalls/syscall_32.tbl
+@@ -2,366 +2,366 @@
+ # 32-bit system call numbers and entry vectors
+ #
+ # The format is:
+-# <number> <abi> <name> <entry point> <compat entry point>
++# <number> <abi> <name> <number of arguments> <require pt_regs> <entry point> <compat entry point>
+ #
+ # The abi is always "i386" for this file.
+ #
+-0	i386	restart_syscall		sys_restart_syscall
+-1	i386	exit			sys_exit
+-2	i386	fork			sys_fork			stub32_fork
+-3	i386	read			sys_read
+-4	i386	write			sys_write
+-5	i386	open			sys_open			compat_sys_open
+-6	i386	close			sys_close
+-7	i386	waitpid			sys_waitpid			sys32_waitpid
+-8	i386	creat			sys_creat
+-9	i386	link			sys_link
+-10	i386	unlink			sys_unlink
+-11	i386	execve			sys_execve			stub32_execve
+-12	i386	chdir			sys_chdir
+-13	i386	time			sys_time			compat_sys_time
+-14	i386	mknod			sys_mknod
+-15	i386	chmod			sys_chmod
+-16	i386	lchown			sys_lchown16
++0	i386	restart_syscall		0	0	sys_restart_syscall
++1	i386	exit			1	0	sys_exit
++2	i386	fork			0	1	sys_fork			stub32_fork
++3	i386	read			3	0	sys_read
++4	i386	write			3	0	sys_write
++5	i386	open			3	0	sys_open			compat_sys_open
++6	i386	close			1	0	sys_close
++7	i386	waitpid			3	0	sys_waitpid			sys32_waitpid
++8	i386	creat			2	0	sys_creat
++9	i386	link			2	0	sys_link
++10	i386	unlink			1	0	sys_unlink
++11	i386	execve			3	1	sys_execve			stub32_execve
++12	i386	chdir			1	0	sys_chdir
++13	i386	time			1	0	sys_time			compat_sys_time
++14	i386	mknod			3	0	sys_mknod
++15	i386	chmod			2	0	sys_chmod
++16	i386	lchown			3	0	sys_lchown16
+ 17	i386	break
+-18	i386	oldstat			sys_stat
+-19	i386	lseek			sys_lseek			compat_sys_lseek
+-20	i386	getpid			sys_getpid
+-21	i386	mount			sys_mount			compat_sys_mount
+-22	i386	umount			sys_oldumount
+-23	i386	setuid			sys_setuid16
+-24	i386	getuid			sys_getuid16
+-25	i386	stime			sys_stime			compat_sys_stime
+-26	i386	ptrace			sys_ptrace			compat_sys_ptrace
+-27	i386	alarm			sys_alarm
+-28	i386	oldfstat		sys_fstat
+-29	i386	pause			sys_pause
+-30	i386	utime			sys_utime			compat_sys_utime
++18	i386	oldstat			2	0	sys_stat
++19	i386	lseek			3	0	sys_lseek			compat_sys_lseek
++20	i386	getpid			0	0	sys_getpid
++21	i386	mount			5	0	sys_mount			compat_sys_mount
++22	i386	umount			1	0	sys_oldumount
++23	i386	setuid			1	0	sys_setuid16
++24	i386	getuid			0	0	sys_getuid16
++25	i386	stime			1	0	sys_stime			compat_sys_stime
++26	i386	ptrace			4	0	sys_ptrace			compat_sys_ptrace
++27	i386	alarm			1	0	sys_alarm
++28	i386	oldfstat		2	0	sys_fstat
++29	i386	pause			0	0	sys_pause
++30	i386	utime			2	0	sys_utime			compat_sys_utime
+ 31	i386	stty
+ 32	i386	gtty
+-33	i386	access			sys_access
+-34	i386	nice			sys_nice
++33	i386	access			2	0	sys_access
++34	i386	nice			1	0	sys_nice
+ 35	i386	ftime
+-36	i386	sync			sys_sync
+-37	i386	kill			sys_kill
+-38	i386	rename			sys_rename
+-39	i386	mkdir			sys_mkdir
+-40	i386	rmdir			sys_rmdir
+-41	i386	dup			sys_dup
+-42	i386	pipe			sys_pipe
+-43	i386	times			sys_times			compat_sys_times
++36	i386	sync			0	0	sys_sync
++37	i386	kill			2	0	sys_kill
++38	i386	rename			2	0	sys_rename
++39	i386	mkdir			2	0	sys_mkdir
++40	i386	rmdir			1	0	sys_rmdir
++41	i386	dup			1	0	sys_dup
++42	i386	pipe			1	0	sys_pipe
++43	i386	times			1	0	sys_times			compat_sys_times
+ 44	i386	prof
+-45	i386	brk			sys_brk
+-46	i386	setgid			sys_setgid16
+-47	i386	getgid			sys_getgid16
+-48	i386	signal			sys_signal
+-49	i386	geteuid			sys_geteuid16
+-50	i386	getegid			sys_getegid16
+-51	i386	acct			sys_acct
+-52	i386	umount2			sys_umount
++45	i386	brk			1	0	sys_brk
++46	i386	setgid			1	0	sys_setgid16
++47	i386	getgid			0	0	sys_getgid16
++48	i386	signal			2	0	sys_signal
++49	i386	geteuid			0	0	sys_geteuid16
++50	i386	getegid			0	0	sys_getegid16
++51	i386	acct			1	0	sys_acct
++52	i386	umount2			2	0	sys_umount
+ 53	i386	lock
+-54	i386	ioctl			sys_ioctl			compat_sys_ioctl
+-55	i386	fcntl			sys_fcntl			compat_sys_fcntl64
++54	i386	ioctl			3	0	sys_ioctl			compat_sys_ioctl
++55	i386	fcntl			3	0	sys_fcntl			compat_sys_fcntl64
+ 56	i386	mpx
+-57	i386	setpgid			sys_setpgid
++57	i386	setpgid			2	0	sys_setpgid
+ 58	i386	ulimit
+-59	i386	oldolduname		sys_olduname
+-60	i386	umask			sys_umask
+-61	i386	chroot			sys_chroot
+-62	i386	ustat			sys_ustat			compat_sys_ustat
+-63	i386	dup2			sys_dup2
+-64	i386	getppid			sys_getppid
+-65	i386	getpgrp			sys_getpgrp
+-66	i386	setsid			sys_setsid
+-67	i386	sigaction		sys_sigaction			compat_sys_sigaction
+-68	i386	sgetmask		sys_sgetmask
+-69	i386	ssetmask		sys_ssetmask
+-70	i386	setreuid		sys_setreuid16
+-71	i386	setregid		sys_setregid16
+-72	i386	sigsuspend		sys_sigsuspend			sys_sigsuspend
+-73	i386	sigpending		sys_sigpending			compat_sys_sigpending
+-74	i386	sethostname		sys_sethostname
+-75	i386	setrlimit		sys_setrlimit			compat_sys_setrlimit
+-76	i386	getrlimit		sys_old_getrlimit		compat_sys_old_getrlimit
+-77	i386	getrusage		sys_getrusage			compat_sys_getrusage
+-78	i386	gettimeofday		sys_gettimeofday		compat_sys_gettimeofday
+-79	i386	settimeofday		sys_settimeofday		compat_sys_settimeofday
+-80	i386	getgroups		sys_getgroups16
+-81	i386	setgroups		sys_setgroups16
+-82	i386	select			sys_old_select			compat_sys_old_select
+-83	i386	symlink			sys_symlink
+-84	i386	oldlstat		sys_lstat
+-85	i386	readlink		sys_readlink
+-86	i386	uselib			sys_uselib
+-87	i386	swapon			sys_swapon
+-88	i386	reboot			sys_reboot
+-89	i386	readdir			sys_old_readdir			compat_sys_old_readdir
+-90	i386	mmap			sys_old_mmap			sys32_mmap
+-91	i386	munmap			sys_munmap
+-92	i386	truncate		sys_truncate			compat_sys_truncate
+-93	i386	ftruncate		sys_ftruncate			compat_sys_ftruncate
+-94	i386	fchmod			sys_fchmod
+-95	i386	fchown			sys_fchown16
+-96	i386	getpriority		sys_getpriority
+-97	i386	setpriority		sys_setpriority
++59	i386	oldolduname		1	0	sys_olduname
++60	i386	umask			1	0	sys_umask
++61	i386	chroot			1	0	sys_chroot
++62	i386	ustat			2	0	sys_ustat			compat_sys_ustat
++63	i386	dup2			2	0	sys_dup2
++64	i386	getppid			0	0	sys_getppid
++65	i386	getpgrp			0	0	sys_getpgrp
++66	i386	setsid			0	0	sys_setsid
++67	i386	sigaction		3	0	sys_sigaction			compat_sys_sigaction
++68	i386	sgetmask		0	0	sys_sgetmask
++69	i386	ssetmask		1	0	sys_ssetmask
++70	i386	setreuid		2	0	sys_setreuid16
++71	i386	setregid		2	0	sys_setregid16
++72	i386	sigsuspend		3	1	sys_sigsuspend			sys_sigsuspend
++73	i386	sigpending		1	0	sys_sigpending			compat_sys_sigpending
++74	i386	sethostname		2	0	sys_sethostname
++75	i386	setrlimit		2	0	sys_setrlimit			compat_sys_setrlimit
++76	i386	getrlimit		2	0	sys_old_getrlimit		compat_sys_old_getrlimit
++77	i386	getrusage		2	0	sys_getrusage			compat_sys_getrusage
++78	i386	gettimeofday		2	0	sys_gettimeofday		compat_sys_gettimeofday
++79	i386	settimeofday		2	0	sys_settimeofday		compat_sys_settimeofday
++80	i386	getgroups		2	0	sys_getgroups16
++81	i386	setgroups		2	0	sys_setgroups16
++82	i386	select			1	0	sys_old_select			compat_sys_old_select
++83	i386	symlink			2	0	sys_symlink
++84	i386	oldlstat		2	0	sys_lstat
++85	i386	readlink		3	0	sys_readlink
++86	i386	uselib			1	0	sys_uselib
++87	i386	swapon			2	0	sys_swapon
++88	i386	reboot			4	0	sys_reboot
++89	i386	readdir			3	0	sys_old_readdir			compat_sys_old_readdir
++90	i386	mmap			1	0	sys_old_mmap			sys32_mmap
++91	i386	munmap			2	0	sys_munmap
++92	i386	truncate		2	0	sys_truncate			compat_sys_truncate
++93	i386	ftruncate		2	0	sys_ftruncate			compat_sys_ftruncate
++94	i386	fchmod			2	0	sys_fchmod
++95	i386	fchown			3	0	sys_fchown16
++96	i386	getpriority		2	0	sys_getpriority
++97	i386	setpriority		3	0	sys_setpriority
+ 98	i386	profil
+-99	i386	statfs			sys_statfs			compat_sys_statfs
+-100	i386	fstatfs			sys_fstatfs			compat_sys_fstatfs
+-101	i386	ioperm			sys_ioperm
+-102	i386	socketcall		sys_socketcall			compat_sys_socketcall
+-103	i386	syslog			sys_syslog
+-104	i386	setitimer		sys_setitimer			compat_sys_setitimer
+-105	i386	getitimer		sys_getitimer			compat_sys_getitimer
+-106	i386	stat			sys_newstat			compat_sys_newstat
+-107	i386	lstat			sys_newlstat			compat_sys_newlstat
+-108	i386	fstat			sys_newfstat			compat_sys_newfstat
+-109	i386	olduname		sys_uname
+-110	i386	iopl			sys_iopl
+-111	i386	vhangup			sys_vhangup
++99	i386	statfs			2	0	sys_statfs			compat_sys_statfs
++100	i386	fstatfs			2	0	sys_fstatfs			compat_sys_fstatfs
++101	i386	ioperm			3	0	sys_ioperm
++102	i386	socketcall		2	0	sys_socketcall			compat_sys_socketcall
++103	i386	syslog			3	0	sys_syslog
++104	i386	setitimer		3	0	sys_setitimer			compat_sys_setitimer
++105	i386	getitimer		2	0	sys_getitimer			compat_sys_getitimer
++106	i386	stat			2	0	sys_newstat			compat_sys_newstat
++107	i386	lstat			2	0	sys_newlstat			compat_sys_newlstat
++108	i386	fstat			2	0	sys_newfstat			compat_sys_newfstat
++109	i386	olduname		1	0	sys_uname
++110	i386	iopl			1	1	sys_iopl
++111	i386	vhangup			0	0	sys_vhangup
+ 112	i386	idle
+-113	i386	vm86old			sys_vm86old			sys32_vm86_warning
+-114	i386	wait4			sys_wait4			compat_sys_wait4
+-115	i386	swapoff			sys_swapoff
+-116	i386	sysinfo			sys_sysinfo			compat_sys_sysinfo
+-117	i386	ipc			sys_ipc				compat_sys_ipc
+-118	i386	fsync			sys_fsync
+-119	i386	sigreturn		sys_sigreturn			stub32_sigreturn
+-120	i386	clone			sys_clone			stub32_clone
+-121	i386	setdomainname		sys_setdomainname
+-122	i386	uname			sys_newuname
+-123	i386	modify_ldt		sys_modify_ldt
+-124	i386	adjtimex		sys_adjtimex			compat_sys_adjtimex
+-125	i386	mprotect		sys_mprotect
+-126	i386	sigprocmask		sys_sigprocmask			compat_sys_sigprocmask
++113	i386	vm86old			1	0	sys_vm86old			sys32_vm86_warning
++114	i386	wait4			4	0	sys_wait4			compat_sys_wait4
++115	i386	swapoff			1	0	sys_swapoff
++116	i386	sysinfo			1	0	sys_sysinfo			compat_sys_sysinfo
++117	i386	ipc			6	0	sys_ipc				compat_sys_ipc
++118	i386	fsync			1	0	sys_fsync
++119	i386	sigreturn		0	1	sys_sigreturn			stub32_sigreturn
++120	i386	clone			3	1	sys_clone			stub32_clone
++121	i386	setdomainname		2	0	sys_setdomainname
++122	i386	uname			1	0	sys_newuname
++123	i386	modify_ldt		3	0	sys_modify_ldt
++124	i386	adjtimex		1	0	sys_adjtimex			compat_sys_adjtimex
++125	i386	mprotect		3	0	sys_mprotect
++126	i386	sigprocmask		3	0	sys_sigprocmask			compat_sys_sigprocmask
+ 127	i386	create_module
+-128	i386	init_module		sys_init_module
+-129	i386	delete_module		sys_delete_module
++128	i386	init_module		3	0	sys_init_module
++129	i386	delete_module		2	0	sys_delete_module
+ 130	i386	get_kernel_syms
+-131	i386	quotactl		sys_quotactl			sys32_quotactl
+-132	i386	getpgid			sys_getpgid
+-133	i386	fchdir			sys_fchdir
+-134	i386	bdflush			sys_bdflush
+-135	i386	sysfs			sys_sysfs
+-136	i386	personality		sys_personality
++131	i386	quotactl		4	0	sys_quotactl			sys32_quotactl
++132	i386	getpgid			1	0	sys_getpgid
++133	i386	fchdir			1	0	sys_fchdir
++134	i386	bdflush			2	0	sys_bdflush
++135	i386	sysfs			3	0	sys_sysfs
++136	i386	personality		1	0	sys_personality
+ 137	i386	afs_syscall
+-138	i386	setfsuid		sys_setfsuid16
+-139	i386	setfsgid		sys_setfsgid16
+-140	i386	_llseek			sys_llseek
+-141	i386	getdents		sys_getdents			compat_sys_getdents
+-142	i386	_newselect		sys_select			compat_sys_select
+-143	i386	flock			sys_flock
+-144	i386	msync			sys_msync
+-145	i386	readv			sys_readv			compat_sys_readv
+-146	i386	writev			sys_writev			compat_sys_writev
+-147	i386	getsid			sys_getsid
+-148	i386	fdatasync		sys_fdatasync
+-149	i386	_sysctl			sys_sysctl			compat_sys_sysctl
+-150	i386	mlock			sys_mlock
+-151	i386	munlock			sys_munlock
+-152	i386	mlockall		sys_mlockall
+-153	i386	munlockall		sys_munlockall
+-154	i386	sched_setparam		sys_sched_setparam
+-155	i386	sched_getparam		sys_sched_getparam
+-156	i386	sched_setscheduler	sys_sched_setscheduler
+-157	i386	sched_getscheduler	sys_sched_getscheduler
+-158	i386	sched_yield		sys_sched_yield
+-159	i386	sched_get_priority_max	sys_sched_get_priority_max
+-160	i386	sched_get_priority_min	sys_sched_get_priority_min
+-161	i386	sched_rr_get_interval	sys_sched_rr_get_interval	compat_sys_sched_rr_get_interval
+-162	i386	nanosleep		sys_nanosleep			compat_sys_nanosleep
+-163	i386	mremap			sys_mremap
+-164	i386	setresuid		sys_setresuid16
+-165	i386	getresuid		sys_getresuid16
+-166	i386	vm86			sys_vm86			sys32_vm86_warning
++138	i386	setfsuid		1	0	sys_setfsuid16
++139	i386	setfsgid		1	0	sys_setfsgid16
++140	i386	_llseek			5	0	sys_llseek
++141	i386	getdents		3	0	sys_getdents			compat_sys_getdents
++142	i386	_newselect		5	0	sys_select			compat_sys_select
++143	i386	flock			2	0	sys_flock
++144	i386	msync			3	0	sys_msync
++145	i386	readv			3	0	sys_readv			compat_sys_readv
++146	i386	writev			3	0	sys_writev			compat_sys_writev
++147	i386	getsid			1	0	sys_getsid
++148	i386	fdatasync		1	0	sys_fdatasync
++149	i386	_sysctl			1	0	sys_sysctl			compat_sys_sysctl
++150	i386	mlock			2	0	sys_mlock
++151	i386	munlock			2	0	sys_munlock
++152	i386	mlockall		1	0	sys_mlockall
++153	i386	munlockall		0	0	sys_munlockall
++154	i386	sched_setparam		2	0	sys_sched_setparam
++155	i386	sched_getparam		2	0	sys_sched_getparam
++156	i386	sched_setscheduler	3	0	sys_sched_setscheduler
++157	i386	sched_getscheduler	1	0	sys_sched_getscheduler
++158	i386	sched_yield		0	0	sys_sched_yield
++159	i386	sched_get_priority_max	1	0	sys_sched_get_priority_max
++160	i386	sched_get_priority_min	1	0	sys_sched_get_priority_min
++161	i386	sched_rr_get_interval	2	0	sys_sched_rr_get_interval	compat_sys_sched_rr_get_interval
++162	i386	nanosleep		2	0	sys_nanosleep			compat_sys_nanosleep
++163	i386	mremap			5	0	sys_mremap
++164	i386	setresuid		3	0	sys_setresuid16
++165	i386	getresuid		3	0	sys_getresuid16
++166	i386	vm86			2	0	sys_vm86			sys32_vm86_warning
+ 167	i386	query_module
+-168	i386	poll			sys_poll
++168	i386	poll			3	0	sys_poll
+ 169	i386	nfsservctl
+-170	i386	setresgid		sys_setresgid16
+-171	i386	getresgid		sys_getresgid16
+-172	i386	prctl			sys_prctl
+-173	i386	rt_sigreturn		sys_rt_sigreturn		stub32_rt_sigreturn
+-174	i386	rt_sigaction		sys_rt_sigaction		compat_sys_rt_sigaction
+-175	i386	rt_sigprocmask		sys_rt_sigprocmask
+-176	i386	rt_sigpending		sys_rt_sigpending		compat_sys_rt_sigpending
+-177	i386	rt_sigtimedwait		sys_rt_sigtimedwait		compat_sys_rt_sigtimedwait
+-178	i386	rt_sigqueueinfo		sys_rt_sigqueueinfo		compat_sys_rt_sigqueueinfo
+-179	i386	rt_sigsuspend		sys_rt_sigsuspend
+-180	i386	pread64			sys_pread64			sys32_pread
+-181	i386	pwrite64		sys_pwrite64			sys32_pwrite
+-182	i386	chown			sys_chown16
+-183	i386	getcwd			sys_getcwd
+-184	i386	capget			sys_capget
+-185	i386	capset			sys_capset
+-186	i386	sigaltstack		sys_sigaltstack			compat_sys_sigaltstack
+-187	i386	sendfile		sys_sendfile			compat_sys_sendfile
++170	i386	setresgid		3	0	sys_setresgid16
++171	i386	getresgid		3	0	sys_getresgid16
++172	i386	prctl			5	0	sys_prctl
++173	i386	rt_sigreturn		0	1	sys_rt_sigreturn		stub32_rt_sigreturn
++174	i386	rt_sigaction		4	0	sys_rt_sigaction		compat_sys_rt_sigaction
++175	i386	rt_sigprocmask		4	0	sys_rt_sigprocmask
++176	i386	rt_sigpending		2	0	sys_rt_sigpending		compat_sys_rt_sigpending
++177	i386	rt_sigtimedwait		4	0	sys_rt_sigtimedwait		compat_sys_rt_sigtimedwait
++178	i386	rt_sigqueueinfo		3	0	sys_rt_sigqueueinfo		compat_sys_rt_sigqueueinfo
++179	i386	rt_sigsuspend		2	1	sys_rt_sigsuspend
++180	i386	pread64			5	0	sys_pread64			sys32_pread
++181	i386	pwrite64		5	0	sys_pwrite64			sys32_pwrite
++182	i386	chown			3	0	sys_chown16
++183	i386	getcwd			2	0	sys_getcwd
++184	i386	capget			2	0	sys_capget
++185	i386	capset			2	0	sys_capset
++186	i386	sigaltstack		2	1	sys_sigaltstack			compat_sys_sigaltstack
++187	i386	sendfile		4	0	sys_sendfile			compat_sys_sendfile
+ 188	i386	getpmsg
+ 189	i386	putpmsg
+-190	i386	vfork			sys_vfork			stub32_vfork
+-191	i386	ugetrlimit		sys_getrlimit			compat_sys_getrlimit
+-192	i386	mmap2			sys_mmap_pgoff
+-193	i386	truncate64		sys_truncate64			sys32_truncate64
+-194	i386	ftruncate64		sys_ftruncate64			sys32_ftruncate64
+-195	i386	stat64			sys_stat64			sys32_stat64
+-196	i386	lstat64			sys_lstat64			sys32_lstat64
+-197	i386	fstat64			sys_fstat64			sys32_fstat64
+-198	i386	lchown32		sys_lchown
+-199	i386	getuid32		sys_getuid
+-200	i386	getgid32		sys_getgid
+-201	i386	geteuid32		sys_geteuid
+-202	i386	getegid32		sys_getegid
+-203	i386	setreuid32		sys_setreuid
+-204	i386	setregid32		sys_setregid
+-205	i386	getgroups32		sys_getgroups
+-206	i386	setgroups32		sys_setgroups
+-207	i386	fchown32		sys_fchown
+-208	i386	setresuid32		sys_setresuid
+-209	i386	getresuid32		sys_getresuid
+-210	i386	setresgid32		sys_setresgid
+-211	i386	getresgid32		sys_getresgid
+-212	i386	chown32			sys_chown
+-213	i386	setuid32		sys_setuid
+-214	i386	setgid32		sys_setgid
+-215	i386	setfsuid32		sys_setfsuid
+-216	i386	setfsgid32		sys_setfsgid
+-217	i386	pivot_root		sys_pivot_root
+-218	i386	mincore			sys_mincore
+-219	i386	madvise			sys_madvise
+-220	i386	getdents64		sys_getdents64			compat_sys_getdents64
+-221	i386	fcntl64			sys_fcntl64			compat_sys_fcntl64
++190	i386	vfork			0	1	sys_vfork			stub32_vfork
++191	i386	ugetrlimit		2	0	sys_getrlimit			compat_sys_getrlimit
++192	i386	mmap2			6	0	sys_mmap_pgoff
++193	i386	truncate64		3	0	sys_truncate64			sys32_truncate64
++194	i386	ftruncate64		3	0	sys_ftruncate64			sys32_ftruncate64
++195	i386	stat64			2	0	sys_stat64			sys32_stat64
++196	i386	lstat64			2	0	sys_lstat64			sys32_lstat64
++197	i386	fstat64			2	0	sys_fstat64			sys32_fstat64
++198	i386	lchown32		3	0	sys_lchown
++199	i386	getuid32		0	0	sys_getuid
++200	i386	getgid32		0	0	sys_getgid
++201	i386	geteuid32		0	0	sys_geteuid
++202	i386	getegid32		0	0	sys_getegid
++203	i386	setreuid32		2	0	sys_setreuid
++204	i386	setregid32		2	0	sys_setregid
++205	i386	getgroups32		2	0	sys_getgroups
++206	i386	setgroups32		2	0	sys_setgroups
++207	i386	fchown32		3	0	sys_fchown
++208	i386	setresuid32		3	0	sys_setresuid
++209	i386	getresuid32		3	0	sys_getresuid
++210	i386	setresgid32		3	0	sys_setresgid
++211	i386	getresgid32		3	0	sys_getresgid
++212	i386	chown32			3	0	sys_chown
++213	i386	setuid32		1	0	sys_setuid
++214	i386	setgid32		1	0	sys_setgid
++215	i386	setfsuid32		1	0	sys_setfsuid
++216	i386	setfsgid32		1	0	sys_setfsgid
++217	i386	pivot_root		2	0	sys_pivot_root
++218	i386	mincore			3	0	sys_mincore
++219	i386	madvise			3	0	sys_madvise
++220	i386	getdents64		3	0	sys_getdents64			compat_sys_getdents64
++221	i386	fcntl64			3	0	sys_fcntl64			compat_sys_fcntl64
+ # 222 is unused
+ # 223 is unused
+-224	i386	gettid			sys_gettid
+-225	i386	readahead		sys_readahead			sys32_readahead
+-226	i386	setxattr		sys_setxattr
+-227	i386	lsetxattr		sys_lsetxattr
+-228	i386	fsetxattr		sys_fsetxattr
+-229	i386	getxattr		sys_getxattr
+-230	i386	lgetxattr		sys_lgetxattr
+-231	i386	fgetxattr		sys_fgetxattr
+-232	i386	listxattr		sys_listxattr
+-233	i386	llistxattr		sys_llistxattr
+-234	i386	flistxattr		sys_flistxattr
+-235	i386	removexattr		sys_removexattr
+-236	i386	lremovexattr		sys_lremovexattr
+-237	i386	fremovexattr		sys_fremovexattr
+-238	i386	tkill			sys_tkill
+-239	i386	sendfile64		sys_sendfile64
+-240	i386	futex			sys_futex			compat_sys_futex
+-241	i386	sched_setaffinity	sys_sched_setaffinity		compat_sys_sched_setaffinity
+-242	i386	sched_getaffinity	sys_sched_getaffinity		compat_sys_sched_getaffinity
+-243	i386	set_thread_area		sys_set_thread_area
+-244	i386	get_thread_area		sys_get_thread_area
+-245	i386	io_setup		sys_io_setup			compat_sys_io_setup
+-246	i386	io_destroy		sys_io_destroy
+-247	i386	io_getevents		sys_io_getevents		compat_sys_io_getevents
+-248	i386	io_submit		sys_io_submit			compat_sys_io_submit
+-249	i386	io_cancel		sys_io_cancel
+-250	i386	fadvise64		sys_fadvise64			sys32_fadvise64
++224	i386	gettid			0	0	sys_gettid
++225	i386	readahead		4	0	sys_readahead			sys32_readahead
++226	i386	setxattr		5	0	sys_setxattr
++227	i386	lsetxattr		5	0	sys_lsetxattr
++228	i386	fsetxattr		5	0	sys_fsetxattr
++229	i386	getxattr		4	0	sys_getxattr
++230	i386	lgetxattr		4	0	sys_lgetxattr
++231	i386	fgetxattr		4	0	sys_fgetxattr
++232	i386	listxattr		3	0	sys_listxattr
++233	i386	llistxattr		3	0	sys_llistxattr
++234	i386	flistxattr		3	0	sys_flistxattr
++235	i386	removexattr		2	0	sys_removexattr
++236	i386	lremovexattr		2	0	sys_lremovexattr
++237	i386	fremovexattr		2	0	sys_fremovexattr
++238	i386	tkill			2	0	sys_tkill
++239	i386	sendfile64		4	0	sys_sendfile64
++240	i386	futex			5	0	sys_futex			compat_sys_futex
++241	i386	sched_setaffinity	3	0	sys_sched_setaffinity		compat_sys_sched_setaffinity
++242	i386	sched_getaffinity	3	0	sys_sched_getaffinity		compat_sys_sched_getaffinity
++243	i386	set_thread_area		1	0	sys_set_thread_area
++244	i386	get_thread_area		1	0	sys_get_thread_area
++245	i386	io_setup		2	0	sys_io_setup			compat_sys_io_setup
++246	i386	io_destroy		1	0	sys_io_destroy
++247	i386	io_getevents		5	0	sys_io_getevents		compat_sys_io_getevents
++248	i386	io_submit		3	0	sys_io_submit			compat_sys_io_submit
++249	i386	io_cancel		3	0	sys_io_cancel
++250	i386	fadvise64		5	0	sys_fadvise64			sys32_fadvise64
+ # 251 is available for reuse (was briefly sys_set_zone_reclaim)
+-252	i386	exit_group		sys_exit_group
+-253	i386	lookup_dcookie		sys_lookup_dcookie		compat_sys_lookup_dcookie
+-254	i386	epoll_create		sys_epoll_create
+-255	i386	epoll_ctl		sys_epoll_ctl
+-256	i386	epoll_wait		sys_epoll_wait
+-257	i386	remap_file_pages	sys_remap_file_pages
+-258	i386	set_tid_address		sys_set_tid_address
+-259	i386	timer_create		sys_timer_create		compat_sys_timer_create
+-260	i386	timer_settime		sys_timer_settime		compat_sys_timer_settime
+-261	i386	timer_gettime		sys_timer_gettime		compat_sys_timer_gettime
+-262	i386	timer_getoverrun	sys_timer_getoverrun
+-263	i386	timer_delete		sys_timer_delete
+-264	i386	clock_settime		sys_clock_settime		compat_sys_clock_settime
+-265	i386	clock_gettime		sys_clock_gettime		compat_sys_clock_gettime
+-266	i386	clock_getres		sys_clock_getres		compat_sys_clock_getres
+-267	i386	clock_nanosleep		sys_clock_nanosleep		compat_sys_clock_nanosleep
+-268	i386	statfs64		sys_statfs64			compat_sys_statfs64
+-269	i386	fstatfs64		sys_fstatfs64			compat_sys_fstatfs64
+-270	i386	tgkill			sys_tgkill
+-271	i386	utimes			sys_utimes			compat_sys_utimes
+-272	i386	fadvise64_64		sys_fadvise64_64		sys32_fadvise64_64
++252	i386	exit_group		1	0	sys_exit_group
++253	i386	lookup_dcookie		4	0	sys_lookup_dcookie		compat_sys_lookup_dcookie
++254	i386	epoll_create		1	0	sys_epoll_create
++255	i386	epoll_ctl		4	0	sys_epoll_ctl
++256	i386	epoll_wait		4	0	sys_epoll_wait
++257	i386	remap_file_pages	5	0	sys_remap_file_pages
++258	i386	set_tid_address		1	0	sys_set_tid_address
++259	i386	timer_create		3	0	sys_timer_create		compat_sys_timer_create
++260	i386	timer_settime		4	0	sys_timer_settime		compat_sys_timer_settime
++261	i386	timer_gettime		2	0	sys_timer_gettime		compat_sys_timer_gettime
++262	i386	timer_getoverrun	1	0	sys_timer_getoverrun
++263	i386	timer_delete		1	0	sys_timer_delete
++264	i386	clock_settime		2	0	sys_clock_settime		compat_sys_clock_settime
++265	i386	clock_gettime		2	0	sys_clock_gettime		compat_sys_clock_gettime
++266	i386	clock_getres		2	0	sys_clock_getres		compat_sys_clock_getres
++267	i386	clock_nanosleep		4	0	sys_clock_nanosleep		compat_sys_clock_nanosleep
++268	i386	statfs64		3	0	sys_statfs64			compat_sys_statfs64
++269	i386	fstatfs64		3	0	sys_fstatfs64			compat_sys_fstatfs64
++270	i386	tgkill			3	0	sys_tgkill
++271	i386	utimes			2	0	sys_utimes			compat_sys_utimes
++272	i386	fadvise64_64		6	0	sys_fadvise64_64		sys32_fadvise64_64
+ 273	i386	vserver
+-274	i386	mbind			sys_mbind
+-275	i386	get_mempolicy		sys_get_mempolicy		compat_sys_get_mempolicy
+-276	i386	set_mempolicy		sys_set_mempolicy
+-277	i386	mq_open			sys_mq_open			compat_sys_mq_open
+-278	i386	mq_unlink		sys_mq_unlink
+-279	i386	mq_timedsend		sys_mq_timedsend		compat_sys_mq_timedsend
+-280	i386	mq_timedreceive		sys_mq_timedreceive		compat_sys_mq_timedreceive
+-281	i386	mq_notify		sys_mq_notify			compat_sys_mq_notify
+-282	i386	mq_getsetattr		sys_mq_getsetattr		compat_sys_mq_getsetattr
+-283	i386	kexec_load		sys_kexec_load			compat_sys_kexec_load
+-284	i386	waitid			sys_waitid			compat_sys_waitid
++274	i386	mbind			6	0	sys_mbind
++275	i386	get_mempolicy		5	0	sys_get_mempolicy		compat_sys_get_mempolicy
++276	i386	set_mempolicy		3	0	sys_set_mempolicy
++277	i386	mq_open			4	0	sys_mq_open			compat_sys_mq_open
++278	i386	mq_unlink		1	0	sys_mq_unlink
++279	i386	mq_timedsend		5	0	sys_mq_timedsend		compat_sys_mq_timedsend
++280	i386	mq_timedreceive		5	0	sys_mq_timedreceive		compat_sys_mq_timedreceive
++281	i386	mq_notify		2	0	sys_mq_notify			compat_sys_mq_notify
++282	i386	mq_getsetattr		3	0	sys_mq_getsetattr		compat_sys_mq_getsetattr
++283	i386	kexec_load		4	0	sys_kexec_load			compat_sys_kexec_load
++284	i386	waitid			5	0	sys_waitid			compat_sys_waitid
+ # 285 sys_setaltroot
+-286	i386	add_key			sys_add_key
+-287	i386	request_key		sys_request_key
+-288	i386	keyctl			sys_keyctl
+-289	i386	ioprio_set		sys_ioprio_set
+-290	i386	ioprio_get		sys_ioprio_get
+-291	i386	inotify_init		sys_inotify_init
+-292	i386	inotify_add_watch	sys_inotify_add_watch
+-293	i386	inotify_rm_watch	sys_inotify_rm_watch
+-294	i386	migrate_pages		sys_migrate_pages
+-295	i386	openat			sys_openat			compat_sys_openat
+-296	i386	mkdirat			sys_mkdirat
+-297	i386	mknodat			sys_mknodat
+-298	i386	fchownat		sys_fchownat
+-299	i386	futimesat		sys_futimesat			compat_sys_futimesat
+-300	i386	fstatat64		sys_fstatat64			sys32_fstatat
+-301	i386	unlinkat		sys_unlinkat
+-302	i386	renameat		sys_renameat
+-303	i386	linkat			sys_linkat
+-304	i386	symlinkat		sys_symlinkat
+-305	i386	readlinkat		sys_readlinkat
+-306	i386	fchmodat		sys_fchmodat
+-307	i386	faccessat		sys_faccessat
+-308	i386	pselect6		sys_pselect6			compat_sys_pselect6
+-309	i386	ppoll			sys_ppoll			compat_sys_ppoll
+-310	i386	unshare			sys_unshare
+-311	i386	set_robust_list		sys_set_robust_list		compat_sys_set_robust_list
+-312	i386	get_robust_list		sys_get_robust_list		compat_sys_get_robust_list
+-313	i386	splice			sys_splice
+-314	i386	sync_file_range		sys_sync_file_range		sys32_sync_file_range
+-315	i386	tee			sys_tee
+-316	i386	vmsplice		sys_vmsplice			compat_sys_vmsplice
+-317	i386	move_pages		sys_move_pages			compat_sys_move_pages
+-318	i386	getcpu			sys_getcpu
+-319	i386	epoll_pwait		sys_epoll_pwait
+-320	i386	utimensat		sys_utimensat			compat_sys_utimensat
+-321	i386	signalfd		sys_signalfd			compat_sys_signalfd
+-322	i386	timerfd_create		sys_timerfd_create
+-323	i386	eventfd			sys_eventfd
+-324	i386	fallocate		sys_fallocate			sys32_fallocate
+-325	i386	timerfd_settime		sys_timerfd_settime		compat_sys_timerfd_settime
+-326	i386	timerfd_gettime		sys_timerfd_gettime		compat_sys_timerfd_gettime
+-327	i386	signalfd4		sys_signalfd4			compat_sys_signalfd4
+-328	i386	eventfd2		sys_eventfd2
+-329	i386	epoll_create1		sys_epoll_create1
+-330	i386	dup3			sys_dup3
+-331	i386	pipe2			sys_pipe2
+-332	i386	inotify_init1		sys_inotify_init1
+-333	i386	preadv			sys_preadv			compat_sys_preadv
+-334	i386	pwritev			sys_pwritev			compat_sys_pwritev
+-335	i386	rt_tgsigqueueinfo	sys_rt_tgsigqueueinfo		compat_sys_rt_tgsigqueueinfo
+-336	i386	perf_event_open		sys_perf_event_open
+-337	i386	recvmmsg		sys_recvmmsg			compat_sys_recvmmsg
+-338	i386	fanotify_init		sys_fanotify_init
+-339	i386	fanotify_mark		sys_fanotify_mark		compat_sys_fanotify_mark
+-340	i386	prlimit64		sys_prlimit64
+-341	i386	name_to_handle_at	sys_name_to_handle_at
+-342	i386	open_by_handle_at	sys_open_by_handle_at		compat_sys_open_by_handle_at
+-343	i386	clock_adjtime		sys_clock_adjtime		compat_sys_clock_adjtime
+-344	i386	syncfs			sys_syncfs
+-345	i386	sendmmsg		sys_sendmmsg			compat_sys_sendmmsg
+-346	i386	setns			sys_setns
+-347	i386	process_vm_readv	sys_process_vm_readv		compat_sys_process_vm_readv
+-348	i386	process_vm_writev	sys_process_vm_writev		compat_sys_process_vm_writev
+-349	i386	kcmp			sys_kcmp
+-350	i386	finit_module		sys_finit_module
+-351	i386	sched_setattr		sys_sched_setattr
+-352	i386	sched_getattr		sys_sched_getattr
+-353	i386	renameat2		sys_renameat2
+-354	i386	seccomp			sys_seccomp
+-355	i386	getrandom		sys_getrandom
+-356	i386	memfd_create		sys_memfd_create
+-357	i386	bpf			sys_bpf
+-358	i386	execveat		sys_execveat			stub32_execveat
++286	i386	add_key			5	0	sys_add_key
++287	i386	request_key		4	0	sys_request_key
++288	i386	keyctl			5	0	sys_keyctl
++289	i386	ioprio_set		3	0	sys_ioprio_set
++290	i386	ioprio_get		2	0	sys_ioprio_get
++291	i386	inotify_init		0	0	sys_inotify_init
++292	i386	inotify_add_watch	3	0	sys_inotify_add_watch
++293	i386	inotify_rm_watch	2	0	sys_inotify_rm_watch
++294	i386	migrate_pages		4	0	sys_migrate_pages
++295	i386	openat			4	0	sys_openat			compat_sys_openat
++296	i386	mkdirat			3	0	sys_mkdirat
++297	i386	mknodat			4	0	sys_mknodat
++298	i386	fchownat		5	0	sys_fchownat
++299	i386	futimesat		3	0	sys_futimesat			compat_sys_futimesat
++300	i386	fstatat64		4	0	sys_fstatat64			sys32_fstatat
++301	i386	unlinkat		3	0	sys_unlinkat
++302	i386	renameat		4	0	sys_renameat
++303	i386	linkat			5	0	sys_linkat
++304	i386	symlinkat		3	0	sys_symlinkat
++305	i386	readlinkat		4	0	sys_readlinkat
++306	i386	fchmodat		3	0	sys_fchmodat
++307	i386	faccessat		3	0	sys_faccessat
++308	i386	pselect6		6	0	sys_pselect6			compat_sys_pselect6
++309	i386	ppoll			5	0	sys_ppoll			compat_sys_ppoll
++310	i386	unshare			1	0	sys_unshare
++311	i386	set_robust_list		2	0	sys_set_robust_list		compat_sys_set_robust_list
++312	i386	get_robust_list		3	0	sys_get_robust_list		compat_sys_get_robust_list
++313	i386	splice			6	0	sys_splice
++314	i386	sync_file_range		6	0	sys_sync_file_range		sys32_sync_file_range
++315	i386	tee			4	0	sys_tee
++316	i386	vmsplice		4	0	sys_vmsplice			compat_sys_vmsplice
++317	i386	move_pages		6	0	sys_move_pages			compat_sys_move_pages
++318	i386	getcpu			3	0	sys_getcpu
++319	i386	epoll_pwait		6	0	sys_epoll_pwait
++320	i386	utimensat		4	0	sys_utimensat			compat_sys_utimensat
++321	i386	signalfd		3	0	sys_signalfd			compat_sys_signalfd
++322	i386	timerfd_create		2	0	sys_timerfd_create
++323	i386	eventfd			1	0	sys_eventfd
++324	i386	fallocate		6	0	sys_fallocate			sys32_fallocate
++325	i386	timerfd_settime		4	0	sys_timerfd_settime		compat_sys_timerfd_settime
++326	i386	timerfd_gettime		2	0	sys_timerfd_gettime		compat_sys_timerfd_gettime
++327	i386	signalfd4		4	0	sys_signalfd4			compat_sys_signalfd4
++328	i386	eventfd2		2	0	sys_eventfd2
++329	i386	epoll_create1		1	0	sys_epoll_create1
++330	i386	dup3			3	0	sys_dup3
++331	i386	pipe2			2	0	sys_pipe2
++332	i386	inotify_init1		1	0	sys_inotify_init1
++333	i386	preadv			5	0	sys_preadv			compat_sys_preadv
++334	i386	pwritev			5	0	sys_pwritev			compat_sys_pwritev
++335	i386	rt_tgsigqueueinfo	4	0	sys_rt_tgsigqueueinfo		compat_sys_rt_tgsigqueueinfo
++336	i386	perf_event_open		5	0	sys_perf_event_open
++337	i386	recvmmsg		5	0	sys_recvmmsg			compat_sys_recvmmsg
++338	i386	fanotify_init		2	0	sys_fanotify_init
++339	i386	fanotify_mark		6	0	sys_fanotify_mark		compat_sys_fanotify_mark
++340	i386	prlimit64		4	0	sys_prlimit64
++341	i386	name_to_handle_at	5	0	sys_name_to_handle_at
++342	i386	open_by_handle_at	3	0	sys_open_by_handle_at		compat_sys_open_by_handle_at
++343	i386	clock_adjtime		2	0	sys_clock_adjtime		compat_sys_clock_adjtime
++344	i386	syncfs			1	0	sys_syncfs
++345	i386	sendmmsg		4	0	sys_sendmmsg			compat_sys_sendmmsg
++346	i386	setns			2	0	sys_setns
++347	i386	process_vm_readv	6	0	sys_process_vm_readv		compat_sys_process_vm_readv
++348	i386	process_vm_writev	6	0	sys_process_vm_writev		compat_sys_process_vm_writev
++349	i386	kcmp			5	0	sys_kcmp
++350	i386	finit_module		3	0	sys_finit_module
++351	i386	sched_setattr		2	0	sys_sched_setattr
++352	i386	sched_getattr		3	0	sys_sched_getattr
++353	i386	renameat2		5	0	sys_renameat2
++354	i386	seccomp			3	0	sys_seccomp
++355	i386	getrandom		3	0	sys_getrandom
++356	i386	memfd_create		2	0	sys_memfd_create
++357	i386	bpf			3	0	sys_bpf
++358	i386	execveat		5	0	sys_execveat			stub32_execveat
+diff --git a/arch/x86/syscalls/syscall_64.tbl b/arch/x86/syscalls/syscall_64.tbl
+index 8d656fb..6165161 100644
+--- a/arch/x86/syscalls/syscall_64.tbl
++++ b/arch/x86/syscalls/syscall_64.tbl
+@@ -2,369 +2,369 @@
+ # 64-bit system call numbers and entry vectors
+ #
+ # The format is:
+-# <number> <abi> <name> <entry point>
++# <number> <abi> <name> <unused> <unused> <entry point>
+ #
+ # The abi is "common", "64" or "x32" for this file.
+ #
+-0	common	read			sys_read
+-1	common	write			sys_write
+-2	common	open			sys_open
+-3	common	close			sys_close
+-4	common	stat			sys_newstat
+-5	common	fstat			sys_newfstat
+-6	common	lstat			sys_newlstat
+-7	common	poll			sys_poll
+-8	common	lseek			sys_lseek
+-9	common	mmap			sys_mmap
+-10	common	mprotect		sys_mprotect
+-11	common	munmap			sys_munmap
+-12	common	brk			sys_brk
+-13	64	rt_sigaction		sys_rt_sigaction
+-14	common	rt_sigprocmask		sys_rt_sigprocmask
+-15	64	rt_sigreturn		stub_rt_sigreturn
+-16	64	ioctl			sys_ioctl
+-17	common	pread64			sys_pread64
+-18	common	pwrite64		sys_pwrite64
+-19	64	readv			sys_readv
+-20	64	writev			sys_writev
+-21	common	access			sys_access
+-22	common	pipe			sys_pipe
+-23	common	select			sys_select
+-24	common	sched_yield		sys_sched_yield
+-25	common	mremap			sys_mremap
+-26	common	msync			sys_msync
+-27	common	mincore			sys_mincore
+-28	common	madvise			sys_madvise
+-29	common	shmget			sys_shmget
+-30	common	shmat			sys_shmat
+-31	common	shmctl			sys_shmctl
+-32	common	dup			sys_dup
+-33	common	dup2			sys_dup2
+-34	common	pause			sys_pause
+-35	common	nanosleep		sys_nanosleep
+-36	common	getitimer		sys_getitimer
+-37	common	alarm			sys_alarm
+-38	common	setitimer		sys_setitimer
+-39	common	getpid			sys_getpid
+-40	common	sendfile		sys_sendfile64
+-41	common	socket			sys_socket
+-42	common	connect			sys_connect
+-43	common	accept			sys_accept
+-44	common	sendto			sys_sendto
+-45	64	recvfrom		sys_recvfrom
+-46	64	sendmsg			sys_sendmsg
+-47	64	recvmsg			sys_recvmsg
+-48	common	shutdown		sys_shutdown
+-49	common	bind			sys_bind
+-50	common	listen			sys_listen
+-51	common	getsockname		sys_getsockname
+-52	common	getpeername		sys_getpeername
+-53	common	socketpair		sys_socketpair
+-54	64	setsockopt		sys_setsockopt
+-55	64	getsockopt		sys_getsockopt
+-56	common	clone			stub_clone
+-57	common	fork			stub_fork
+-58	common	vfork			stub_vfork
+-59	64	execve			stub_execve
+-60	common	exit			sys_exit
+-61	common	wait4			sys_wait4
+-62	common	kill			sys_kill
+-63	common	uname			sys_newuname
+-64	common	semget			sys_semget
+-65	common	semop			sys_semop
+-66	common	semctl			sys_semctl
+-67	common	shmdt			sys_shmdt
+-68	common	msgget			sys_msgget
+-69	common	msgsnd			sys_msgsnd
+-70	common	msgrcv			sys_msgrcv
+-71	common	msgctl			sys_msgctl
+-72	common	fcntl			sys_fcntl
+-73	common	flock			sys_flock
+-74	common	fsync			sys_fsync
+-75	common	fdatasync		sys_fdatasync
+-76	common	truncate		sys_truncate
+-77	common	ftruncate		sys_ftruncate
+-78	common	getdents		sys_getdents
+-79	common	getcwd			sys_getcwd
+-80	common	chdir			sys_chdir
+-81	common	fchdir			sys_fchdir
+-82	common	rename			sys_rename
+-83	common	mkdir			sys_mkdir
+-84	common	rmdir			sys_rmdir
+-85	common	creat			sys_creat
+-86	common	link			sys_link
+-87	common	unlink			sys_unlink
+-88	common	symlink			sys_symlink
+-89	common	readlink		sys_readlink
+-90	common	chmod			sys_chmod
+-91	common	fchmod			sys_fchmod
+-92	common	chown			sys_chown
+-93	common	fchown			sys_fchown
+-94	common	lchown			sys_lchown
+-95	common	umask			sys_umask
+-96	common	gettimeofday		sys_gettimeofday
+-97	common	getrlimit		sys_getrlimit
+-98	common	getrusage		sys_getrusage
+-99	common	sysinfo			sys_sysinfo
+-100	common	times			sys_times
+-101	64	ptrace			sys_ptrace
+-102	common	getuid			sys_getuid
+-103	common	syslog			sys_syslog
+-104	common	getgid			sys_getgid
+-105	common	setuid			sys_setuid
+-106	common	setgid			sys_setgid
+-107	common	geteuid			sys_geteuid
+-108	common	getegid			sys_getegid
+-109	common	setpgid			sys_setpgid
+-110	common	getppid			sys_getppid
+-111	common	getpgrp			sys_getpgrp
+-112	common	setsid			sys_setsid
+-113	common	setreuid		sys_setreuid
+-114	common	setregid		sys_setregid
+-115	common	getgroups		sys_getgroups
+-116	common	setgroups		sys_setgroups
+-117	common	setresuid		sys_setresuid
+-118	common	getresuid		sys_getresuid
+-119	common	setresgid		sys_setresgid
+-120	common	getresgid		sys_getresgid
+-121	common	getpgid			sys_getpgid
+-122	common	setfsuid		sys_setfsuid
+-123	common	setfsgid		sys_setfsgid
+-124	common	getsid			sys_getsid
+-125	common	capget			sys_capget
+-126	common	capset			sys_capset
+-127	64	rt_sigpending		sys_rt_sigpending
+-128	64	rt_sigtimedwait		sys_rt_sigtimedwait
+-129	64	rt_sigqueueinfo		sys_rt_sigqueueinfo
+-130	common	rt_sigsuspend		sys_rt_sigsuspend
+-131	64	sigaltstack		sys_sigaltstack
+-132	common	utime			sys_utime
+-133	common	mknod			sys_mknod
++0	common	read			-	-	sys_read
++1	common	write			-	-	sys_write
++2	common	open			-	-	sys_open
++3	common	close			-	-	sys_close
++4	common	stat			-	-	sys_newstat
++5	common	fstat			-	-	sys_newfstat
++6	common	lstat			-	-	sys_newlstat
++7	common	poll			-	-	sys_poll
++8	common	lseek			-	-	sys_lseek
++9	common	mmap			-	-	sys_mmap
++10	common	mprotect		-	-	sys_mprotect
++11	common	munmap			-	-	sys_munmap
++12	common	brk			-	-	sys_brk
++13	64	rt_sigaction		-	-	sys_rt_sigaction
++14	common	rt_sigprocmask		-	-	sys_rt_sigprocmask
++15	64	rt_sigreturn		-	-	stub_rt_sigreturn
++16	64	ioctl			-	-	sys_ioctl
++17	common	pread64			-	-	sys_pread64
++18	common	pwrite64		-	-	sys_pwrite64
++19	64	readv			-	-	sys_readv
++20	64	writev			-	-	sys_writev
++21	common	access			-	-	sys_access
++22	common	pipe			-	-	sys_pipe
++23	common	select			-	-	sys_select
++24	common	sched_yield		-	-	sys_sched_yield
++25	common	mremap			-	-	sys_mremap
++26	common	msync			-	-	sys_msync
++27	common	mincore			-	-	sys_mincore
++28	common	madvise			-	-	sys_madvise
++29	common	shmget			-	-	sys_shmget
++30	common	shmat			-	-	sys_shmat
++31	common	shmctl			-	-	sys_shmctl
++32	common	dup			-	-	sys_dup
++33	common	dup2			-	-	sys_dup2
++34	common	pause			-	-	sys_pause
++35	common	nanosleep		-	-	sys_nanosleep
++36	common	getitimer		-	-	sys_getitimer
++37	common	alarm			-	-	sys_alarm
++38	common	setitimer		-	-	sys_setitimer
++39	common	getpid			-	-	sys_getpid
++40	common	sendfile		-	-	sys_sendfile64
++41	common	socket			-	-	sys_socket
++42	common	connect			-	-	sys_connect
++43	common	accept			-	-	sys_accept
++44	common	sendto			-	-	sys_sendto
++45	64	recvfrom		-	-	sys_recvfrom
++46	64	sendmsg			-	-	sys_sendmsg
++47	64	recvmsg			-	-	sys_recvmsg
++48	common	shutdown		-	-	sys_shutdown
++49	common	bind			-	-	sys_bind
++50	common	listen			-	-	sys_listen
++51	common	getsockname		-	-	sys_getsockname
++52	common	getpeername		-	-	sys_getpeername
++53	common	socketpair		-	-	sys_socketpair
++54	64	setsockopt		-	-	sys_setsockopt
++55	64	getsockopt		-	-	sys_getsockopt
++56	common	clone			-	-	stub_clone
++57	common	fork			-	-	stub_fork
++58	common	vfork			-	-	stub_vfork
++59	64	execve			-	-	stub_execve
++60	common	exit			-	-	sys_exit
++61	common	wait4			-	-	sys_wait4
++62	common	kill			-	-	sys_kill
++63	common	uname			-	-	sys_newuname
++64	common	semget			-	-	sys_semget
++65	common	semop			-	-	sys_semop
++66	common	semctl			-	-	sys_semctl
++67	common	shmdt			-	-	sys_shmdt
++68	common	msgget			-	-	sys_msgget
++69	common	msgsnd			-	-	sys_msgsnd
++70	common	msgrcv			-	-	sys_msgrcv
++71	common	msgctl			-	-	sys_msgctl
++72	common	fcntl			-	-	sys_fcntl
++73	common	flock			-	-	sys_flock
++74	common	fsync			-	-	sys_fsync
++75	common	fdatasync		-	-	sys_fdatasync
++76	common	truncate		-	-	sys_truncate
++77	common	ftruncate		-	-	sys_ftruncate
++78	common	getdents		-	-	sys_getdents
++79	common	getcwd			-	-	sys_getcwd
++80	common	chdir			-	-	sys_chdir
++81	common	fchdir			-	-	sys_fchdir
++82	common	rename			-	-	sys_rename
++83	common	mkdir			-	-	sys_mkdir
++84	common	rmdir			-	-	sys_rmdir
++85	common	creat			-	-	sys_creat
++86	common	link			-	-	sys_link
++87	common	unlink			-	-	sys_unlink
++88	common	symlink			-	-	sys_symlink
++89	common	readlink		-	-	sys_readlink
++90	common	chmod			-	-	sys_chmod
++91	common	fchmod			-	-	sys_fchmod
++92	common	chown			-	-	sys_chown
++93	common	fchown			-	-	sys_fchown
++94	common	lchown			-	-	sys_lchown
++95	common	umask			-	-	sys_umask
++96	common	gettimeofday		-	-	sys_gettimeofday
++97	common	getrlimit		-	-	sys_getrlimit
++98	common	getrusage		-	-	sys_getrusage
++99	common	sysinfo			-	-	sys_sysinfo
++100	common	times			-	-	sys_times
++101	64	ptrace			-	-	sys_ptrace
++102	common	getuid			-	-	sys_getuid
++103	common	syslog			-	-	sys_syslog
++104	common	getgid			-	-	sys_getgid
++105	common	setuid			-	-	sys_setuid
++106	common	setgid			-	-	sys_setgid
++107	common	geteuid			-	-	sys_geteuid
++108	common	getegid			-	-	sys_getegid
++109	common	setpgid			-	-	sys_setpgid
++110	common	getppid			-	-	sys_getppid
++111	common	getpgrp			-	-	sys_getpgrp
++112	common	setsid			-	-	sys_setsid
++113	common	setreuid		-	-	sys_setreuid
++114	common	setregid		-	-	sys_setregid
++115	common	getgroups		-	-	sys_getgroups
++116	common	setgroups		-	-	sys_setgroups
++117	common	setresuid		-	-	sys_setresuid
++118	common	getresuid		-	-	sys_getresuid
++119	common	setresgid		-	-	sys_setresgid
++120	common	getresgid		-	-	sys_getresgid
++121	common	getpgid			-	-	sys_getpgid
++122	common	setfsuid		-	-	sys_setfsuid
++123	common	setfsgid		-	-	sys_setfsgid
++124	common	getsid			-	-	sys_getsid
++125	common	capget			-	-	sys_capget
++126	common	capset			-	-	sys_capset
++127	64	rt_sigpending		-	-	sys_rt_sigpending
++128	64	rt_sigtimedwait		-	-	sys_rt_sigtimedwait
++129	64	rt_sigqueueinfo		-	-	sys_rt_sigqueueinfo
++130	common	rt_sigsuspend		-	-	sys_rt_sigsuspend
++131	64	sigaltstack		-	-	sys_sigaltstack
++132	common	utime			-	-	sys_utime
++133	common	mknod			-	-	sys_mknod
+ 134	64	uselib
+-135	common	personality		sys_personality
+-136	common	ustat			sys_ustat
+-137	common	statfs			sys_statfs
+-138	common	fstatfs			sys_fstatfs
+-139	common	sysfs			sys_sysfs
+-140	common	getpriority		sys_getpriority
+-141	common	setpriority		sys_setpriority
+-142	common	sched_setparam		sys_sched_setparam
+-143	common	sched_getparam		sys_sched_getparam
+-144	common	sched_setscheduler	sys_sched_setscheduler
+-145	common	sched_getscheduler	sys_sched_getscheduler
+-146	common	sched_get_priority_max	sys_sched_get_priority_max
+-147	common	sched_get_priority_min	sys_sched_get_priority_min
+-148	common	sched_rr_get_interval	sys_sched_rr_get_interval
+-149	common	mlock			sys_mlock
+-150	common	munlock			sys_munlock
+-151	common	mlockall		sys_mlockall
+-152	common	munlockall		sys_munlockall
+-153	common	vhangup			sys_vhangup
+-154	common	modify_ldt		sys_modify_ldt
+-155	common	pivot_root		sys_pivot_root
+-156	64	_sysctl			sys_sysctl
+-157	common	prctl			sys_prctl
+-158	common	arch_prctl		sys_arch_prctl
+-159	common	adjtimex		sys_adjtimex
+-160	common	setrlimit		sys_setrlimit
+-161	common	chroot			sys_chroot
+-162	common	sync			sys_sync
+-163	common	acct			sys_acct
+-164	common	settimeofday		sys_settimeofday
+-165	common	mount			sys_mount
+-166	common	umount2			sys_umount
+-167	common	swapon			sys_swapon
+-168	common	swapoff			sys_swapoff
+-169	common	reboot			sys_reboot
+-170	common	sethostname		sys_sethostname
+-171	common	setdomainname		sys_setdomainname
+-172	common	iopl			stub_iopl
+-173	common	ioperm			sys_ioperm
++135	common	personality		-	-	sys_personality
++136	common	ustat			-	-	sys_ustat
++137	common	statfs			-	-	sys_statfs
++138	common	fstatfs			-	-	sys_fstatfs
++139	common	sysfs			-	-	sys_sysfs
++140	common	getpriority		-	-	sys_getpriority
++141	common	setpriority		-	-	sys_setpriority
++142	common	sched_setparam		-	-	sys_sched_setparam
++143	common	sched_getparam		-	-	sys_sched_getparam
++144	common	sched_setscheduler	-	-	sys_sched_setscheduler
++145	common	sched_getscheduler	-	-	sys_sched_getscheduler
++146	common	sched_get_priority_max	-	-	sys_sched_get_priority_max
++147	common	sched_get_priority_min	-	-	sys_sched_get_priority_min
++148	common	sched_rr_get_interval	-	-	sys_sched_rr_get_interval
++149	common	mlock			-	-	sys_mlock
++150	common	munlock			-	-	sys_munlock
++151	common	mlockall		-	-	sys_mlockall
++152	common	munlockall		-	-	sys_munlockall
++153	common	vhangup			-	-	sys_vhangup
++154	common	modify_ldt		-	-	sys_modify_ldt
++155	common	pivot_root		-	-	sys_pivot_root
++156	64	_sysctl			-	-	sys_sysctl
++157	common	prctl			-	-	sys_prctl
++158	common	arch_prctl		-	-	sys_arch_prctl
++159	common	adjtimex		-	-	sys_adjtimex
++160	common	setrlimit		-	-	sys_setrlimit
++161	common	chroot			-	-	sys_chroot
++162	common	sync			-	-	sys_sync
++163	common	acct			-	-	sys_acct
++164	common	settimeofday		-	-	sys_settimeofday
++165	common	mount			-	-	sys_mount
++166	common	umount2			-	-	sys_umount
++167	common	swapon			-	-	sys_swapon
++168	common	swapoff			-	-	sys_swapoff
++169	common	reboot			-	-	sys_reboot
++170	common	sethostname		-	-	sys_sethostname
++171	common	setdomainname		-	-	sys_setdomainname
++172	common	iopl			-	-	stub_iopl
++173	common	ioperm			-	-	sys_ioperm
+ 174	64	create_module
+-175	common	init_module		sys_init_module
+-176	common	delete_module		sys_delete_module
++175	common	init_module		-	-	sys_init_module
++176	common	delete_module		-	-	sys_delete_module
+ 177	64	get_kernel_syms
+ 178	64	query_module
+-179	common	quotactl		sys_quotactl
++179	common	quotactl		-	-	sys_quotactl
+ 180	64	nfsservctl
+ 181	common	getpmsg
+ 182	common	putpmsg
+ 183	common	afs_syscall
+ 184	common	tuxcall
+ 185	common	security
+-186	common	gettid			sys_gettid
+-187	common	readahead		sys_readahead
+-188	common	setxattr		sys_setxattr
+-189	common	lsetxattr		sys_lsetxattr
+-190	common	fsetxattr		sys_fsetxattr
+-191	common	getxattr		sys_getxattr
+-192	common	lgetxattr		sys_lgetxattr
+-193	common	fgetxattr		sys_fgetxattr
+-194	common	listxattr		sys_listxattr
+-195	common	llistxattr		sys_llistxattr
+-196	common	flistxattr		sys_flistxattr
+-197	common	removexattr		sys_removexattr
+-198	common	lremovexattr		sys_lremovexattr
+-199	common	fremovexattr		sys_fremovexattr
+-200	common	tkill			sys_tkill
+-201	common	time			sys_time
+-202	common	futex			sys_futex
+-203	common	sched_setaffinity	sys_sched_setaffinity
+-204	common	sched_getaffinity	sys_sched_getaffinity
++186	common	gettid			-	-	sys_gettid
++187	common	readahead		-	-	sys_readahead
++188	common	setxattr		-	-	sys_setxattr
++189	common	lsetxattr		-	-	sys_lsetxattr
++190	common	fsetxattr		-	-	sys_fsetxattr
++191	common	getxattr		-	-	sys_getxattr
++192	common	lgetxattr		-	-	sys_lgetxattr
++193	common	fgetxattr		-	-	sys_fgetxattr
++194	common	listxattr		-	-	sys_listxattr
++195	common	llistxattr		-	-	sys_llistxattr
++196	common	flistxattr		-	-	sys_flistxattr
++197	common	removexattr		-	-	sys_removexattr
++198	common	lremovexattr		-	-	sys_lremovexattr
++199	common	fremovexattr		-	-	sys_fremovexattr
++200	common	tkill			-	-	sys_tkill
++201	common	time			-	-	sys_time
++202	common	futex			-	-	sys_futex
++203	common	sched_setaffinity	-	-	sys_sched_setaffinity
++204	common	sched_getaffinity	-	-	sys_sched_getaffinity
+ 205	64	set_thread_area
+-206	64	io_setup		sys_io_setup
+-207	common	io_destroy		sys_io_destroy
+-208	common	io_getevents		sys_io_getevents
+-209	64	io_submit		sys_io_submit
+-210	common	io_cancel		sys_io_cancel
++206	64	io_setup		-	-	sys_io_setup
++207	common	io_destroy		-	-	sys_io_destroy
++208	common	io_getevents		-	-	sys_io_getevents
++209	64	io_submit		-	-	sys_io_submit
++210	common	io_cancel		-	-	sys_io_cancel
+ 211	64	get_thread_area
+-212	common	lookup_dcookie		sys_lookup_dcookie
+-213	common	epoll_create		sys_epoll_create
++212	common	lookup_dcookie		-	-	sys_lookup_dcookie
++213	common	epoll_create		-	-	sys_epoll_create
+ 214	64	epoll_ctl_old
+ 215	64	epoll_wait_old
+-216	common	remap_file_pages	sys_remap_file_pages
+-217	common	getdents64		sys_getdents64
+-218	common	set_tid_address		sys_set_tid_address
+-219	common	restart_syscall		sys_restart_syscall
+-220	common	semtimedop		sys_semtimedop
+-221	common	fadvise64		sys_fadvise64
+-222	64	timer_create		sys_timer_create
+-223	common	timer_settime		sys_timer_settime
+-224	common	timer_gettime		sys_timer_gettime
+-225	common	timer_getoverrun	sys_timer_getoverrun
+-226	common	timer_delete		sys_timer_delete
+-227	common	clock_settime		sys_clock_settime
+-228	common	clock_gettime		sys_clock_gettime
+-229	common	clock_getres		sys_clock_getres
+-230	common	clock_nanosleep		sys_clock_nanosleep
+-231	common	exit_group		sys_exit_group
+-232	common	epoll_wait		sys_epoll_wait
+-233	common	epoll_ctl		sys_epoll_ctl
+-234	common	tgkill			sys_tgkill
+-235	common	utimes			sys_utimes
++216	common	remap_file_pages	-	-	sys_remap_file_pages
++217	common	getdents64		-	-	sys_getdents64
++218	common	set_tid_address		-	-	sys_set_tid_address
++219	common	restart_syscall		-	-	sys_restart_syscall
++220	common	semtimedop		-	-	sys_semtimedop
++221	common	fadvise64		-	-	sys_fadvise64
++222	64	timer_create		-	-	sys_timer_create
++223	common	timer_settime		-	-	sys_timer_settime
++224	common	timer_gettime		-	-	sys_timer_gettime
++225	common	timer_getoverrun	-	-	sys_timer_getoverrun
++226	common	timer_delete		-	-	sys_timer_delete
++227	common	clock_settime		-	-	sys_clock_settime
++228	common	clock_gettime		-	-	sys_clock_gettime
++229	common	clock_getres		-	-	sys_clock_getres
++230	common	clock_nanosleep		-	-	sys_clock_nanosleep
++231	common	exit_group		-	-	sys_exit_group
++232	common	epoll_wait		-	-	sys_epoll_wait
++233	common	epoll_ctl		-	-	sys_epoll_ctl
++234	common	tgkill			-	-	sys_tgkill
++235	common	utimes			-	-	sys_utimes
+ 236	64	vserver
+-237	common	mbind			sys_mbind
+-238	common	set_mempolicy		sys_set_mempolicy
+-239	common	get_mempolicy		sys_get_mempolicy
+-240	common	mq_open			sys_mq_open
+-241	common	mq_unlink		sys_mq_unlink
+-242	common	mq_timedsend		sys_mq_timedsend
+-243	common	mq_timedreceive		sys_mq_timedreceive
+-244	64	mq_notify		sys_mq_notify
+-245	common	mq_getsetattr		sys_mq_getsetattr
+-246	64	kexec_load		sys_kexec_load
+-247	64	waitid			sys_waitid
+-248	common	add_key			sys_add_key
+-249	common	request_key		sys_request_key
+-250	common	keyctl			sys_keyctl
+-251	common	ioprio_set		sys_ioprio_set
+-252	common	ioprio_get		sys_ioprio_get
+-253	common	inotify_init		sys_inotify_init
+-254	common	inotify_add_watch	sys_inotify_add_watch
+-255	common	inotify_rm_watch	sys_inotify_rm_watch
+-256	common	migrate_pages		sys_migrate_pages
+-257	common	openat			sys_openat
+-258	common	mkdirat			sys_mkdirat
+-259	common	mknodat			sys_mknodat
+-260	common	fchownat		sys_fchownat
+-261	common	futimesat		sys_futimesat
+-262	common	newfstatat		sys_newfstatat
+-263	common	unlinkat		sys_unlinkat
+-264	common	renameat		sys_renameat
+-265	common	linkat			sys_linkat
+-266	common	symlinkat		sys_symlinkat
+-267	common	readlinkat		sys_readlinkat
+-268	common	fchmodat		sys_fchmodat
+-269	common	faccessat		sys_faccessat
+-270	common	pselect6		sys_pselect6
+-271	common	ppoll			sys_ppoll
+-272	common	unshare			sys_unshare
+-273	64	set_robust_list		sys_set_robust_list
+-274	64	get_robust_list		sys_get_robust_list
+-275	common	splice			sys_splice
+-276	common	tee			sys_tee
+-277	common	sync_file_range		sys_sync_file_range
+-278	64	vmsplice		sys_vmsplice
+-279	64	move_pages		sys_move_pages
+-280	common	utimensat		sys_utimensat
+-281	common	epoll_pwait		sys_epoll_pwait
+-282	common	signalfd		sys_signalfd
+-283	common	timerfd_create		sys_timerfd_create
+-284	common	eventfd			sys_eventfd
+-285	common	fallocate		sys_fallocate
+-286	common	timerfd_settime		sys_timerfd_settime
+-287	common	timerfd_gettime		sys_timerfd_gettime
+-288	common	accept4			sys_accept4
+-289	common	signalfd4		sys_signalfd4
+-290	common	eventfd2		sys_eventfd2
+-291	common	epoll_create1		sys_epoll_create1
+-292	common	dup3			sys_dup3
+-293	common	pipe2			sys_pipe2
+-294	common	inotify_init1		sys_inotify_init1
+-295	64	preadv			sys_preadv
+-296	64	pwritev			sys_pwritev
+-297	64	rt_tgsigqueueinfo	sys_rt_tgsigqueueinfo
+-298	common	perf_event_open		sys_perf_event_open
+-299	64	recvmmsg		sys_recvmmsg
+-300	common	fanotify_init		sys_fanotify_init
+-301	common	fanotify_mark		sys_fanotify_mark
+-302	common	prlimit64		sys_prlimit64
+-303	common	name_to_handle_at	sys_name_to_handle_at
+-304	common	open_by_handle_at	sys_open_by_handle_at
+-305	common	clock_adjtime		sys_clock_adjtime
+-306	common	syncfs			sys_syncfs
+-307	64	sendmmsg		sys_sendmmsg
+-308	common	setns			sys_setns
+-309	common	getcpu			sys_getcpu
+-310	64	process_vm_readv	sys_process_vm_readv
+-311	64	process_vm_writev	sys_process_vm_writev
+-312	common	kcmp			sys_kcmp
+-313	common	finit_module		sys_finit_module
+-314	common	sched_setattr		sys_sched_setattr
+-315	common	sched_getattr		sys_sched_getattr
+-316	common	renameat2		sys_renameat2
+-317	common	seccomp			sys_seccomp
+-318	common	getrandom		sys_getrandom
+-319	common	memfd_create		sys_memfd_create
+-320	common	kexec_file_load		sys_kexec_file_load
+-321	common	bpf			sys_bpf
+-322	64	execveat		stub_execveat
++237	common	mbind			-	-	sys_mbind
++238	common	set_mempolicy		-	-	sys_set_mempolicy
++239	common	get_mempolicy		-	-	sys_get_mempolicy
++240	common	mq_open			-	-	sys_mq_open
++241	common	mq_unlink		-	-	sys_mq_unlink
++242	common	mq_timedsend		-	-	sys_mq_timedsend
++243	common	mq_timedreceive		-	-	sys_mq_timedreceive
++244	64	mq_notify		-	-	sys_mq_notify
++245	common	mq_getsetattr		-	-	sys_mq_getsetattr
++246	64	kexec_load		-	-	sys_kexec_load
++247	64	waitid			-	-	sys_waitid
++248	common	add_key			-	-	sys_add_key
++249	common	request_key		-	-	sys_request_key
++250	common	keyctl			-	-	sys_keyctl
++251	common	ioprio_set		-	-	sys_ioprio_set
++252	common	ioprio_get		-	-	sys_ioprio_get
++253	common	inotify_init		-	-	sys_inotify_init
++254	common	inotify_add_watch	-	-	sys_inotify_add_watch
++255	common	inotify_rm_watch	-	-	sys_inotify_rm_watch
++256	common	migrate_pages		-	-	sys_migrate_pages
++257	common	openat			-	-	sys_openat
++258	common	mkdirat			-	-	sys_mkdirat
++259	common	mknodat			-	-	sys_mknodat
++260	common	fchownat		-	-	sys_fchownat
++261	common	futimesat		-	-	sys_futimesat
++262	common	newfstatat		-	-	sys_newfstatat
++263	common	unlinkat		-	-	sys_unlinkat
++264	common	renameat		-	-	sys_renameat
++265	common	linkat			-	-	sys_linkat
++266	common	symlinkat		-	-	sys_symlinkat
++267	common	readlinkat		-	-	sys_readlinkat
++268	common	fchmodat		-	-	sys_fchmodat
++269	common	faccessat		-	-	sys_faccessat
++270	common	pselect6		-	-	sys_pselect6
++271	common	ppoll			-	-	sys_ppoll
++272	common	unshare			-	-	sys_unshare
++273	64	set_robust_list		-	-	sys_set_robust_list
++274	64	get_robust_list		-	-	sys_get_robust_list
++275	common	splice			-	-	sys_splice
++276	common	tee			-	-	sys_tee
++277	common	sync_file_range		-	-	sys_sync_file_range
++278	64	vmsplice		-	-	sys_vmsplice
++279	64	move_pages		-	-	sys_move_pages
++280	common	utimensat		-	-	sys_utimensat
++281	common	epoll_pwait		-	-	sys_epoll_pwait
++282	common	signalfd		-	-	sys_signalfd
++283	common	timerfd_create		-	-	sys_timerfd_create
++284	common	eventfd			-	-	sys_eventfd
++285	common	fallocate		-	-	sys_fallocate
++286	common	timerfd_settime		-	-	sys_timerfd_settime
++287	common	timerfd_gettime		-	-	sys_timerfd_gettime
++288	common	accept4			-	-	sys_accept4
++289	common	signalfd4		-	-	sys_signalfd4
++290	common	eventfd2		-	-	sys_eventfd2
++291	common	epoll_create1		-	-	sys_epoll_create1
++292	common	dup3			-	-	sys_dup3
++293	common	pipe2			-	-	sys_pipe2
++294	common	inotify_init1		-	-	sys_inotify_init1
++295	64	preadv			-	-	sys_preadv
++296	64	pwritev			-	-	sys_pwritev
++297	64	rt_tgsigqueueinfo	-	-	sys_rt_tgsigqueueinfo
++298	common	perf_event_open		-	-	sys_perf_event_open
++299	64	recvmmsg		-	-	sys_recvmmsg
++300	common	fanotify_init		-	-	sys_fanotify_init
++301	common	fanotify_mark		-	-	sys_fanotify_mark
++302	common	prlimit64		-	-	sys_prlimit64
++303	common	name_to_handle_at	-	-	sys_name_to_handle_at
++304	common	open_by_handle_at	-	-	sys_open_by_handle_at
++305	common	clock_adjtime		-	-	sys_clock_adjtime
++306	common	syncfs			-	-	sys_syncfs
++307	64	sendmmsg		-	-	sys_sendmmsg
++308	common	setns			-	-	sys_setns
++309	common	getcpu			-	-	sys_getcpu
++310	64	process_vm_readv	-	-	sys_process_vm_readv
++311	64	process_vm_writev	-	-	sys_process_vm_writev
++312	common	kcmp			-	-	sys_kcmp
++313	common	finit_module		-	-	sys_finit_module
++314	common	sched_setattr		-	-	sys_sched_setattr
++315	common	sched_getattr		-	-	sys_sched_getattr
++316	common	renameat2		-	-	sys_renameat2
++317	common	seccomp			-	-	sys_seccomp
++318	common	getrandom		-	-	sys_getrandom
++319	common	memfd_create		-	-	sys_memfd_create
++320	common	kexec_file_load		-	-	sys_kexec_file_load
++321	common	bpf			-	-	sys_bpf
++322	64	execveat		-	-	stub_execveat
+ 
+ #
+ # x32-specific system call numbers start at 512 to avoid cache impact
+ # for native 64-bit operation.
+ #
+-512	x32	rt_sigaction		compat_sys_rt_sigaction
+-513	x32	rt_sigreturn		stub_x32_rt_sigreturn
+-514	x32	ioctl			compat_sys_ioctl
+-515	x32	readv			compat_sys_readv
+-516	x32	writev			compat_sys_writev
+-517	x32	recvfrom		compat_sys_recvfrom
+-518	x32	sendmsg			compat_sys_sendmsg
+-519	x32	recvmsg			compat_sys_recvmsg
+-520	x32	execve			stub_x32_execve
+-521	x32	ptrace			compat_sys_ptrace
+-522	x32	rt_sigpending		compat_sys_rt_sigpending
+-523	x32	rt_sigtimedwait		compat_sys_rt_sigtimedwait
+-524	x32	rt_sigqueueinfo		compat_sys_rt_sigqueueinfo
+-525	x32	sigaltstack		compat_sys_sigaltstack
+-526	x32	timer_create		compat_sys_timer_create
+-527	x32	mq_notify		compat_sys_mq_notify
+-528	x32	kexec_load		compat_sys_kexec_load
+-529	x32	waitid			compat_sys_waitid
+-530	x32	set_robust_list		compat_sys_set_robust_list
+-531	x32	get_robust_list		compat_sys_get_robust_list
+-532	x32	vmsplice		compat_sys_vmsplice
+-533	x32	move_pages		compat_sys_move_pages
+-534	x32	preadv			compat_sys_preadv64
+-535	x32	pwritev			compat_sys_pwritev64
+-536	x32	rt_tgsigqueueinfo	compat_sys_rt_tgsigqueueinfo
+-537	x32	recvmmsg		compat_sys_recvmmsg
+-538	x32	sendmmsg		compat_sys_sendmmsg
+-539	x32	process_vm_readv	compat_sys_process_vm_readv
+-540	x32	process_vm_writev	compat_sys_process_vm_writev
+-541	x32	setsockopt		compat_sys_setsockopt
+-542	x32	getsockopt		compat_sys_getsockopt
+-543	x32	io_setup		compat_sys_io_setup
+-544	x32	io_submit		compat_sys_io_submit
+-545	x32	execveat		stub_x32_execveat
++512	x32	rt_sigaction		-	-	compat_sys_rt_sigaction
++513	x32	rt_sigreturn		-	-	stub_x32_rt_sigreturn
++514	x32	ioctl			-	-	compat_sys_ioctl
++515	x32	readv			-	-	compat_sys_readv
++516	x32	writev			-	-	compat_sys_writev
++517	x32	recvfrom		-	-	compat_sys_recvfrom
++518	x32	sendmsg			-	-	compat_sys_sendmsg
++519	x32	recvmsg			-	-	compat_sys_recvmsg
++520	x32	execve			-	-	stub_x32_execve
++521	x32	ptrace			-	-	compat_sys_ptrace
++522	x32	rt_sigpending		-	-	compat_sys_rt_sigpending
++523	x32	rt_sigtimedwait		-	-	compat_sys_rt_sigtimedwait
++524	x32	rt_sigqueueinfo		-	-	compat_sys_rt_sigqueueinfo
++525	x32	sigaltstack		-	-	compat_sys_sigaltstack
++526	x32	timer_create		-	-	compat_sys_timer_create
++527	x32	mq_notify		-	-	compat_sys_mq_notify
++528	x32	kexec_load		-	-	compat_sys_kexec_load
++529	x32	waitid			-	-	compat_sys_waitid
++530	x32	set_robust_list		-	-	compat_sys_set_robust_list
++531	x32	get_robust_list		-	-	compat_sys_get_robust_list
++532	x32	vmsplice		-	-	compat_sys_vmsplice
++533	x32	move_pages		-	-	compat_sys_move_pages
++534	x32	preadv			-	-	compat_sys_preadv64
++535	x32	pwritev			-	-	compat_sys_pwritev64
++536	x32	rt_tgsigqueueinfo	-	-	compat_sys_rt_tgsigqueueinfo
++537	x32	recvmmsg		-	-	compat_sys_recvmmsg
++538	x32	sendmmsg		-	-	compat_sys_sendmmsg
++539	x32	process_vm_readv	-	-	compat_sys_process_vm_readv
++540	x32	process_vm_writev	-	-	compat_sys_process_vm_writev
++541	x32	setsockopt		-	-	compat_sys_setsockopt
++542	x32	getsockopt		-	-	compat_sys_getsockopt
++543	x32	io_setup		-	-	compat_sys_io_setup
++544	x32	io_submit		-	-	compat_sys_io_submit
++545	x32	execveat		-	-	stub_x32_execveat
+diff --git a/arch/x86/syscalls/syscallhdr.sh b/arch/x86/syscalls/syscallhdr.sh
+index 31fd5f1..8cf7d0c 100644
+--- a/arch/x86/syscalls/syscallhdr.sh
++++ b/arch/x86/syscalls/syscallhdr.sh
+@@ -14,7 +14,7 @@ grep -E "^[0-9A-Fa-fXx]+[[:space:]]+${my_abis}" "$in" | sort -n | (
+     echo "#define ${fileguard} 1"
+     echo ""
+ 
+-    while read nr abi name entry ; do
++    while read nr abi name num_args req_ptregs entry ; do
+ 	if [ -z "$offset" ]; then
+ 	    echo "#define __NR_${prefix}${name} $nr"
+ 	else
+diff --git a/arch/x86/syscalls/syscalltbl.sh b/arch/x86/syscalls/syscalltbl.sh
+index 0e7f8ec..d93e5d4 100644
+--- a/arch/x86/syscalls/syscalltbl.sh
++++ b/arch/x86/syscalls/syscalltbl.sh
+@@ -4,7 +4,7 @@ in="$1"
+ out="$2"
+ 
+ grep '^[0-9]' "$in" | sort -n | (
+-    while read nr abi name entry compat; do
++    while read nr abi name num_args req_ptregs entry compat; do
+ 	abi=`echo "$abi" | tr '[a-z]' '[A-Z]'`
+ 	if [ -n "$compat" ]; then
+ 	    echo "__SYSCALL_${abi}($nr, $entry, $compat)"
+diff --git a/arch/x86/vdso/Makefile b/arch/x86/vdso/Makefile
+index 7b9be98..208cf62 100644
+--- a/arch/x86/vdso/Makefile
++++ b/arch/x86/vdso/Makefile
+@@ -169,11 +169,17 @@ $(vdso32-images:%=$(obj)/%.dbg): $(obj)/vdso32-%.so.dbg: FORCE \
+ #
+ # The DSO images are built using a special linker script.
+ #
++ifeq ($(CONFIG_KERNEL_MODE_LINUX)$(CONFIG_X86_32),yy) 
++checkundef = $(srctree)/$(src)/checkundef-kml-x86-32.sh
++else
++checkundef = $(srctree)/$(src)/checkundef.sh
++endif
++
+ quiet_cmd_vdso = VDSO    $@
+       cmd_vdso = $(CC) -nostdlib -o $@ \
+ 		       $(VDSO_LDFLAGS) $(VDSO_LDFLAGS_$(filter %.lds,$(^F))) \
+ 		       -Wl,-T,$(filter %.lds,$^) $(filter %.o,$^) && \
+-		 sh $(srctree)/$(src)/checkundef.sh '$(NM)' '$@'
++		 sh $(checkundef) '$(NM)' '$@'
+ 
+ VDSO_LDFLAGS = -fPIC -shared $(call cc-ldoption, -Wl$(comma)--hash-style=sysv) \
+ 	$(call cc-ldoption, -Wl$(comma)--build-id) -Wl,-Bsymbolic $(LTO_CFLAGS)
+diff --git a/arch/x86/vdso/checkundef-kml-x86-32.sh b/arch/x86/vdso/checkundef-kml-x86-32.sh
+new file mode 100644
+index 0000000..262c6f3
+--- /dev/null
++++ b/arch/x86/vdso/checkundef-kml-x86-32.sh
+@@ -0,0 +1,10 @@
++#!/bin/sh
++nm="$1"
++file="$2"
++$nm "$file" | grep '^ *U' | grep -v 'kml_call_table' > /dev/null 2>&1
++if [ $? -eq 1 ]; then
++    exit 0
++else
++    echo "$file: undefined symbols found" >&2
++    exit 1
++fi
+diff --git a/arch/x86/vdso/vdso2c.c b/arch/x86/vdso/vdso2c.c
+index 8627db2..aa9d3b1 100644
+--- a/arch/x86/vdso/vdso2c.c
++++ b/arch/x86/vdso/vdso2c.c
+@@ -102,6 +102,7 @@ struct vdso_sym required_syms[] = {
+ 	{"__kernel_vsyscall", true},
+ 	{"__kernel_sigreturn", true},
+ 	{"__kernel_rt_sigreturn", true},
++	{"__kernel_vsyscall_kml", true},
+ };
+ 
+ __attribute__((format(printf, 1, 2))) __attribute__((noreturn))
+diff --git a/arch/x86/vdso/vdso32-setup.c b/arch/x86/vdso/vdso32-setup.c
+index e904c27..a8f6683 100644
+--- a/arch/x86/vdso/vdso32-setup.c
++++ b/arch/x86/vdso/vdso32-setup.c
+@@ -60,6 +60,25 @@ __setup_param("vdso=", vdso_setup, vdso32_setup, 0);
+ 
+ #endif	/* CONFIG_X86_64 */
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++extern const char kml_call_table;
++extern void __kernel_vsyscall_kml;
++
++static void __init kml_call_table_fixup(const struct vdso_image *image)
++{
++	void* p;
++	unsigned long* to_be_filled;
++
++	p = image->data + image->sym___kernel_vsyscall_kml;
++	to_be_filled = (unsigned long*)(p + 3);
++	*to_be_filled = (unsigned long)&kml_call_table;
++
++	return;
++}
++#else
++#define kml_call_table_fixup(B)
++#endif
++
+ #if defined(CONFIG_X86_32) || defined(CONFIG_COMPAT)
+ const struct vdso_image *selected_vdso32;
+ #endif
+@@ -76,6 +95,10 @@ int __init sysenter_setup(void)
+ 	else
+ 		selected_vdso32 = &vdso_image_32_int80;
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	kml_call_table_fixup(selected_vdso32);
++#endif
++
+ 	init_vdso_image(selected_vdso32);
+ 
+ 	return 0;
+diff --git a/arch/x86/vdso/vdso32/int80.S b/arch/x86/vdso/vdso32/int80.S
+index b15b7c0..703fef1 100644
+--- a/arch/x86/vdso/vdso32/int80.S
++++ b/arch/x86/vdso/vdso32/int80.S
+@@ -5,6 +5,7 @@
+  * This must come first.
+  */
+ #include "sigreturn.S"
++#include "kml.S"
+ 
+ 	.text
+ 	.globl __kernel_vsyscall
+diff --git a/arch/x86/vdso/vdso32/kml.S b/arch/x86/vdso/vdso32/kml.S
+new file mode 100644
+index 0000000..09c9b0c
+--- /dev/null
++++ b/arch/x86/vdso/vdso32/kml.S
+@@ -0,0 +1,45 @@
++
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++
++	.text
++	.org __kernel_rt_sigreturn+32,0x90
++	.globl __kernel_vsyscall_kml
++	.type __kernel_vsyscall_kml,@function
++__kernel_vsyscall_kml:
++.LSTART_vsyscall_kml:
++	jmp *0x12345678(,%eax,4) /* "0x12345678" is used as dummy */
++.LEND_vsyscall_kml:
++	.size __kernel_vsyscall_kml,.-.LSTART_vsyscall_kml
++	.balign 32
++	.previous
++
++	.section .eh_frame,"a",@progbits
++.LSTARTFRAMEDLSI_KML:
++	.long .LENDCIEDLSI_KML-.LSTARTCIEDLSI_KML
++.LSTARTCIEDLSI_KML:
++	.long 0
++	.byte 1
++	.string "zR"
++	.uleb128 1
++	.uleb128 -4
++	.byte 8
++	.uleb128 1
++	.byte 0x1b
++	.byte 0x0c
++	.uleb128 4
++	.uleb128 4
++	.byte 0x88
++	.uleb128 1
++	.align 4
++.LENDCIEDLSI_KML:
++	.long .LENDFDEDLSI_KML-.LSTARTFDEDLSI_KML
++.LSTARTFDEDLSI_KML:
++	.long .LSTARTFDEDLSI_KML-.LSTARTFRAMEDLSI_KML
++	.long .LSTART_vsyscall_kml-.
++	.long .LEND_vsyscall_kml-.LSTART_vsyscall_kml
++	.uleb128 0
++	.align 4
++.LENDFDEDLSI_KML:
++	.previous
++
++#endif
+diff --git a/arch/x86/vdso/vdso32/sysenter.S b/arch/x86/vdso/vdso32/sysenter.S
+index e354bce..c12c5e4 100644
+--- a/arch/x86/vdso/vdso32/sysenter.S
++++ b/arch/x86/vdso/vdso32/sysenter.S
+@@ -5,6 +5,7 @@
+  * This must come first.
+  */
+ #include "sigreturn.S"
++#include "kml.S"
+ 
+ /*
+  * The caller puts arg2 in %ecx, which gets pushed. The kernel will use
+diff --git a/arch/x86/vdso/vdso32/vdso32.lds.S b/arch/x86/vdso/vdso32/vdso32.lds.S
+index 31056cf..1154523 100644
+--- a/arch/x86/vdso/vdso32/vdso32.lds.S
++++ b/arch/x86/vdso/vdso32/vdso32.lds.S
+@@ -32,6 +32,9 @@ VERSION
+ 		__kernel_vsyscall;
+ 		__kernel_sigreturn;
+ 		__kernel_rt_sigreturn;
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(CONFIG_X86_32)
++		__kernel_vsyscall_kml;
++#endif
+ 	local: *;
+ 	};
+ }
+diff --git a/drivers/pnp/pnpbios/bioscalls.c b/drivers/pnp/pnpbios/bioscalls.c
+index 438d4c7..776720e 100644
+--- a/drivers/pnp/pnpbios/bioscalls.c
++++ b/drivers/pnp/pnpbios/bioscalls.c
+@@ -86,6 +86,7 @@ static inline u16 call_pnp_bios(u16 func, u16 arg1, u16 arg2, u16 arg3,
+ 	u16 status;
+ 	struct desc_struct save_desc_40;
+ 	int cpu;
++	NMI_DECLS_GS
+ 
+ 	/*
+ 	 * PnP BIOSes are generally not terribly re-entrant.
+@@ -95,6 +96,8 @@ static inline u16 call_pnp_bios(u16 func, u16 arg1, u16 arg2, u16 arg3,
+ 		return PNP_FUNCTION_NOT_SUPPORTED;
+ 
+ 	cpu = get_cpu();
++
++	NMI_SAVE_GS;
+ 	save_desc_40 = get_cpu_gdt_table(cpu)[0x40 / 8];
+ 	get_cpu_gdt_table(cpu)[0x40 / 8] = bad_bios_desc;
+ 
+@@ -135,6 +138,7 @@ static inline u16 call_pnp_bios(u16 func, u16 arg1, u16 arg2, u16 arg3,
+ 	spin_unlock_irqrestore(&pnp_bios_lock, flags);
+ 
+ 	get_cpu_gdt_table(cpu)[0x40 / 8] = save_desc_40;
++	NMI_RESTORE_GS;
+ 	put_cpu();
+ 
+ 	/* If we get here and this is set then the PnP BIOS faulted on us. */
+diff --git a/fs/binfmt_elf.c b/fs/binfmt_elf.c
+index 995986b..c5da202 100644
+--- a/fs/binfmt_elf.c
++++ b/fs/binfmt_elf.c
+@@ -9,6 +9,10 @@
+  * Copyright 1993, 1994: Eric Youngdale (ericy@cais.com).
+  */
+ 
++#if defined(CONFIG_KERNEL_MODE_LINUX) && defined(INCLUDED_FOR_COMPAT)
++#undef CONFIG_KERNEL_MODE_LINUX
++#endif
++
+ #include <linux/module.h>
+ #include <linux/kernel.h>
+ #include <linux/fs.h>
+@@ -147,7 +151,11 @@ static int padzero(unsigned long elf_bss)
+ 
+ static int
+ create_elf_tables(struct linux_binprm *bprm, struct elfhdr *exec,
+-		unsigned long load_addr, unsigned long interp_load_addr)
++		unsigned long load_addr, unsigned long interp_load_addr
++#ifdef CONFIG_KERNEL_MODE_LINUX
++		, int kernel_mode
++#endif
++)
+ {
+ 	unsigned long p = bprm->p;
+ 	int argc = bprm->argc;
+@@ -660,8 +668,45 @@ static unsigned long randomize_stack_top(unsigned long stack_top)
+ #endif
+ }
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#include <linux/fs_struct.h>
++/*
++ * XXX : we haven't implemented safety check of user programs.
++ */
++#define TRUSTED_DIR_STR		"/trusted/"
++#define TRUSTED_DIR_STR_LEN	9
++
++static inline int is_safe(struct file* file)
++{
++	int ret;
++	char* path;
++	char* tmp;
++
++#ifdef CONFIG_KML_CHECK_CHROOT
++	if (current_chrooted()) {
++		return 0;
++	}
++#endif
++
++	tmp = (char*)__get_free_page(GFP_KERNEL);
++
++	if (!tmp) {
++		return 0;
++	}
++
++	path = d_path(&file->f_path, tmp, PAGE_SIZE);
++	ret = (0 == strncmp(TRUSTED_DIR_STR, path, TRUSTED_DIR_STR_LEN));
++
++        free_page((unsigned long)tmp);
++        return ret;
++}
++#endif
++
+ static int load_elf_binary(struct linux_binprm *bprm)
+ {
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	int kernel_mode = 0;
++#endif
+ 	struct file *interpreter = NULL; /* to shut gcc up */
+  	unsigned long load_addr = 0, load_bias = 0;
+ 	int load_addr_set = 0;
+@@ -1042,8 +1087,15 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ #endif /* ARCH_HAS_SETUP_ADDITIONAL_PAGES */
+ 
+ 	install_exec_creds(bprm);
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	kernel_mode = is_safe(bprm->file);
++#endif
+ 	retval = create_elf_tables(bprm, &loc->elf_ex,
+-			  load_addr, interp_load_addr);
++			  load_addr, interp_load_addr
++#ifdef CONFIG_KERNEL_MODE_LINUX
++			  , kernel_mode
++#endif
++			  );
+ 	if (retval < 0)
+ 		goto out;
+ 	/* N.B. passed_fileno might not be initialized? */
+@@ -1086,7 +1138,15 @@ static int load_elf_binary(struct linux_binprm *bprm)
+ 	ELF_PLAT_INIT(regs, reloc_func_desc);
+ #endif
+ 
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	start_thread(regs, elf_entry, bprm->p);
++#else
++	if (kernel_mode) {
++		start_kernel_thread(regs, elf_entry, bprm->p);
++	} else {
++		start_thread(regs, elf_entry, bprm->p);
++	}
++#endif
+ 	retval = 0;
+ out:
+ 	kfree(loc);
+diff --git a/fs/compat_binfmt_elf.c b/fs/compat_binfmt_elf.c
+index 4d24d17..a57204a 100644
+--- a/fs/compat_binfmt_elf.c
++++ b/fs/compat_binfmt_elf.c
+@@ -142,4 +142,7 @@ static void cputime_to_compat_timeval(const cputime_t cputime,
+ /*
+  * We share all the actual code with the native (64-bit) version.
+  */
++#ifdef CONFIG_KERNEL_MODE_LINUX
++#define INCLUDED_FOR_COMPAT
++#endif
+ #include "binfmt_elf.c"
+diff --git a/init/do_mounts.c b/init/do_mounts.c
+index eb41008..cfa65df 100644
+--- a/init/do_mounts.c
++++ b/init/do_mounts.c
+@@ -44,6 +44,10 @@ static int root_wait;
+ 
+ dev_t ROOT_DEV;
+ 
++#ifdef CONFIG_KERNEL_MODE_LINUX
++struct path* boot_root;
++#endif
++
+ static int __init load_ramdisk(char *str)
+ {
+ 	rd_doload = simple_strtol(str,NULL,0) & 3;
+@@ -594,6 +598,10 @@ out:
+ 	devtmpfs_mount("dev");
+ 	sys_mount(".", "/", NULL, MS_MOVE, NULL);
+ 	sys_chroot(".");
++#ifdef CONFIG_KERNEL_MODE_LINUX
++	boot_root = &current->fs->root;
++	path_get(boot_root);
++#endif
+ }
+ 
+ static bool is_tmpfs;
+diff --git a/kernel/Kconfig.kml b/kernel/Kconfig.kml
+new file mode 100644
+index 0000000..9925a1d
+--- /dev/null
++++ b/kernel/Kconfig.kml
+@@ -0,0 +1,34 @@
++
++menu "Kernel Mode Linux"
++
++config KERNEL_MODE_LINUX
++        bool "Kernel Mode Linux"
++        ---help---
++          This enables Kernel Mode Linux. In Kernel Mode Linux, user programs
++          can be executed safely in kernel mode and access a kernel address space
++          directly. Thus, for example, costly mode switching between a user and a kernel
++          can be eliminated. If you say Y here, the kernel enables Kernel Mode Linux.
++
++          More information about Kernel Mode Linux can be found in the
++          <file:Documentation/kml.txt>
++
++          If you don't know what to do here, say N.
++
++config KML_CHECK_CHROOT
++        bool "Check for chroot"
++        default y
++        depends on KERNEL_MODE_LINUX
++        ---help---
++          This enables the check for the current root file system being chrooted
++          when executing user processes in kernel mode. In the current KML
++          implementation, programs in the dicretory "/trusted" are executed in
++          kernel mode. Therefore, the chroot check is necessary because,
++          if the root file system is chrooted to "/home/foo/",
++          programs in the directory "/home/foo/trusted" are accidentally executed in kernel mode.
++
++          If you don't know what to do here, say Y.
++
++comment "Safety check have not been implemented"
++depends on KERNEL_MODE_LINUX
++
++endmenu
+diff --git a/lib/iov_iter.c b/lib/iov_iter.c
+index 9d96e283..168afc6 100644
+--- a/lib/iov_iter.c
++++ b/lib/iov_iter.c
+@@ -322,7 +322,11 @@ void iov_iter_init(struct iov_iter *i, int direction,
+ 			size_t count)
+ {
+ 	/* It will get better.  Eventually... */
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	if (segment_eq(get_fs(), KERNEL_DS)) {
++#else
++	if (segment_eq(get_fs(), KERNEL_DS) && !test_thread_flag(TIF_KU)) {
++#endif
+ 		direction |= ITER_KVEC;
+ 		i->type = direction;
+ 		i->kvec = (struct kvec *)iov;
+diff --git a/mm/memory.c b/mm/memory.c
+index 97839f5..efd6236 100644
+--- a/mm/memory.c
++++ b/mm/memory.c
+@@ -3650,7 +3650,11 @@ void might_fault(void)
+ 	 * get paged out, therefore we'll never actually fault, and the
+ 	 * below annotations will generate false positives.
+ 	 */
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	if (segment_eq(get_fs(), KERNEL_DS))
++#else
++	if (segment_eq(get_fs(), KERNEL_DS) && !test_thread_flag(TIF_KU))
++#endif
+ 		return;
+ 
+ 	/*
+diff --git a/net/9p/client.c b/net/9p/client.c
+index e86a9be..77298b5 100644
+--- a/net/9p/client.c
++++ b/net/9p/client.c
+@@ -842,7 +842,11 @@ static struct p9_req_t *p9_client_zc_rpc(struct p9_client *c, int8_t type,
+ 		sigpending = 0;
+ 
+ 	/* If we are called with KERNEL_DS force kern_buf */
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	if (segment_eq(get_fs(), KERNEL_DS))
++#else
++	if (segment_eq(get_fs(), KERNEL_DS) && !test_thread_flag(TIF_KU))
++#endif
+ 		kern_buf = 1;
+ 
+ 	err = c->trans_mod->zc_request(c, req, uidata, uodata,
+diff --git a/security/tomoyo/network.c b/security/tomoyo/network.c
+index 9752771..94aed5c 100644
+--- a/security/tomoyo/network.c
++++ b/security/tomoyo/network.c
+@@ -608,7 +608,11 @@ static int tomoyo_check_unix_address(struct sockaddr *addr,
+ static bool tomoyo_kernel_service(void)
+ {
+ 	/* Nothing to do if I am a kernel service. */
++#ifndef CONFIG_KERNEL_MODE_LINUX
+ 	return segment_eq(get_fs(), KERNEL_DS);
++#else
++	return segment_eq(get_fs(), KERNEL_DS) && !test_thread_flag(TIF_KU);
++#endif
+ }
+ 
+ /**
