@@ -1,2 +1,3 @@
 #!/bin/bash -e
-firecracker --api-sock /tmp/firecracker.socket
+rm -f /tmp/firecracker.socket
+./firecracker --api-sock /tmp/firecracker.socket
