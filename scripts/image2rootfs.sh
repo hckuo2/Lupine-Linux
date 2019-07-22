@@ -1,5 +1,5 @@
 #!/bin/bash
-# Usage: ./image2rootfs.sh app tag
+# Usage: ./image2rootfs.sh app tag fs
 die() { echo "$*" 1>&2 ; exit 1; }
 
 app=$1
