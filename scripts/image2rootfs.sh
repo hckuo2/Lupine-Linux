@@ -11,9 +11,9 @@ if [ "$container_id" == "" ]; then
     die "empty container id."
 fi
 
+app=$(echo $app | tr '/' '-')
 docker export $container_id > $app.tar || die "failed to create tar."
 docker rm $container_id;
-
 mnt=$(mktemp -d)
 dd if=/dev/zero of=$app.$fs bs=1 count=0 seek=10G
 mkfs.$fs $app.$fs
