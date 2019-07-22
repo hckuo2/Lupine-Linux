@@ -11,6 +11,10 @@ build-linux:
 	docker run -it -v "$(PWD)/linux":/linux-volume --rm linuxbuild:latest	\
 		bash -c "make -j8 -C /linux-volume"
 
+build-linux-lto:
+	docker run -it -v "$(PWD)/linux-misc":/linux-volume --rm linuxbuild:latest	\
+		bash -c "make -j8 -C /linux-volume"
+
 run-hello:
 	make -C hello
 	qemu-system-x86_64 \

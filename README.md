@@ -24,12 +24,12 @@ Update submodule:
 `git submodule update --init`
 
 ## Files
-scripts
-├── firecrackerd.sh (wrapper firecracker daeomn)
-├── firecracker-run.sh (wrapper of firecrakcer client)
-├── image2rootfs.sh (create userspace image from docker image)
-├── run-helper.sh (shared variables and helper functions)
 
+scripts
+|-- firecrackerd.sh (wrapper firecracker daeomn)
+|-- firecracker-run.sh (wrapper of firecrakcer client)
+|-- image2rootfs.sh (create userspace root fs from docker image)
+|-- run-helper.sh (shared variables and helper functions)
 
 
 ## Takeaways:
