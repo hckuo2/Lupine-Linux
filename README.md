@@ -29,6 +29,7 @@ scripts
 |-- firecrackerd.sh (wrapper firecracker daeomn)
 |-- firecracker-run.sh (wrapper of firecrakcer client)
 |-- image2rootfs.sh (create userspace root fs from docker image)
+|-- firecracker-lz4bench-run.sh (runs lz4 bench as a firecracker microvm lupine+kml+mmio)
 `-- run-helper.sh (shared variables and helper functions)
 ```
 
