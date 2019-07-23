@@ -20,9 +20,18 @@ mkfs.$fs $app.$fs
 sudo mount $app.$fs $mnt
 sudo tar -xvf $app.tar -C $mnt
 
+# install devices
+sudo mknod -m 622 $mnt/dev/console c 5 1
+sudo mknod -m 666 $mnt/dev/null c 1 3
+sudo mknod -m 666 $mnt/dev/zero c 1 5
+sudo mknod -m 666 $mnt/dev/ptmx c 5 2
+sudo mknod -m 666 $mnt/dev/tty c 5 0
+sudo mknod -m 444 $mnt/dev/random c 1 8
+sudo mknod -m 444 $mnt/dev/urandom c 1 9
+
 # install network setup script
 sudo cp scripts/busybox-x86_64 $mnt
-sudo cp scripts/setup_net.sh $mnt
+sudo cp scripts/guest*.sh $mnt
 # For KML use
 sudo mkdir $mnt/trusted
 
