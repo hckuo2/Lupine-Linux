@@ -19,5 +19,12 @@ dd if=/dev/zero of=$app.$fs bs=1 count=0 seek=10G
 mkfs.$fs $app.$fs
 sudo mount $app.$fs $mnt
 sudo tar -xvf $app.tar -C $mnt
+
+# install network setup script
+sudo cp scripts/busybox-x86_64 $mnt
+sudo cp scripts/setup_net.sh $mnt
+# For KML use
+sudo mkdir $mnt/trusted
+
 sudo umount $mnt
 rmdir $mnt
