@@ -13,15 +13,15 @@ fi
 
 app=$(echo $app | tr '/' '-')
 docker export $container_id > $app.tar || die "failed to create tar."
+trap "rm $app.tar" EXIT
 docker rm $container_id;
 mnt=$(mktemp -d)
-dd if=/dev/zero of=$app.$fs bs=1 count=0 seek=10G
+dd if=/dev/zero of=$app.$fs bs=1 count=0 seek=20G
 mkfs.$fs $app.$fs
 sudo mount $app.$fs $mnt
 sudo tar -xvf $app.tar -C $mnt
 
 # install devices
-sudo mknod -m 622 $mnt/dev/console c 5 1
 sudo mknod -m 666 $mnt/dev/null c 1 3
 sudo mknod -m 666 $mnt/dev/zero c 1 5
 sudo mknod -m 666 $mnt/dev/ptmx c 5 2
@@ -32,8 +32,5 @@ sudo mknod -m 444 $mnt/dev/urandom c 1 9
 # install network setup script
 sudo cp scripts/busybox-x86_64 $mnt
 sudo cp scripts/guest*.sh $mnt
-# For KML use
-sudo mkdir $mnt/trusted
-
 sudo umount $mnt
 rmdir $mnt

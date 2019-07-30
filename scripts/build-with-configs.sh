@@ -29,3 +29,4 @@ make build-linux && \
     pushd $LINUX && \
     cp vmlinux $BUILDDIR && \
     INSTALL_PATH=$BUILDDIR make install;
+echo "Linux size:" $(stat -c "%s" $BUILDDIR/vmlinux)

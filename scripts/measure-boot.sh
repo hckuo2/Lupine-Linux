@@ -4,11 +4,12 @@ LOG=bootlog
 KERNEL=$1
 total=0
 
+rm measure-boot.ext2
 [ -f measure-boot.ext2 ] || ./scripts/image2rootfs.sh measure-boot latest ext2
 
-for i in $(seq 10); do
+for i in $(seq 30); do
     echo "" > $LOG
-    firectl --firecracker-binary=$(pwd)/firecracker \
+    taskset -c 1 firectl --firecracker-binary=$(pwd)/firecracker \
         --kernel $KERNEL \
         --root-drive=measure-boot.ext2  \
         --firecracker-log=$LOG \
