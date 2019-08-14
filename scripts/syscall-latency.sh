@@ -14,6 +14,6 @@ stat() {
 for t in $types; do 
     printf "%s " $t
     for i in `seq $itr`; do
-        ./syscall-latency -N $rep null
+        ./syscall-latency -N $rep $t
     done | cut -d: -f2 | stat
 done
