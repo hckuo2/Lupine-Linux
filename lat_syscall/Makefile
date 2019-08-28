@@ -1,12 +1,25 @@
-all: trusted/lat_syscall
+all: lat_syscall lat_syscall-static
 
-trusted/lat_syscall: lat_syscall.c
-	mkdir -p trusted
-	gcc -o $@ -static lat_syscall.c lib_timing.c
+MUSL_DIR=/home/djwillia/musl
+MUSL_INSTALL_DIR=/home/djwillia/musl/stuff/musl
+MUSL_GCC=$(MUSL_INSTALL_DIR)/bin/musl-gcc
 
-docker: Dockerfile trusted/lat_syscall
+.PHONY: always
+libc.so: always
+	make -C $(MUSL_DIR) install \
+	&& cp $(MUSL_INSTALL_DIR)/lib/libc.so .
+
+lat_syscall-static: libc.so lat_syscall.c Makefile
+	$(MUSL_GCC) -o $@ -static lat_syscall.c lib_timing.c
+
+lat_syscall: libc.so lat_syscall.c Makefile
+	$(MUSL_GCC) -o $@ lat_syscall.c lib_timing.c
+
+docker: Dockerfile lat_syscall lat_syscall-static
 	docker build -t lat_syscall .
 
+image: docker
+	(cd .. && scripts/image2rootfs.sh lat_syscall latest ext2)
+
 clean:
-	rm -f trusted/lat_syscall
-	rmdir trusted
+	rm -f lat_syscall lat_syscall-static

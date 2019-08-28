@@ -3,6 +3,7 @@ all: hello hello-static
 MUSL_DIR=/home/djwillia/musl
 MUSL_INSTALL_DIR=/home/djwillia/musl/stuff/musl
 MUSL_GCC=$(MUSL_INSTALL_DIR)/bin/musl-gcc
+
 hello: libc.so hello.c
 	$(MUSL_GCC) hello.c -o hello
 
