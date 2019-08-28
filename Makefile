@@ -1,3 +1,7 @@
+
+qemu-test:
+	qemu-system-x86_64 -enable-kvm -no-reboot -kernel linux/arch/x86_64/boot/bzImage -drive "file=./lat_syscall.ext2,format=raw" -nographic -nodefaults -serial stdio -append "panic=-1 console=ttyS0 root=/dev/sda rw loglevel=15 nokaslr init=/bin/ash"
+
 build-env-image:
 	cd docker && \
 		docker build . -t linuxbuild:latest -f build-env.Dockerfile

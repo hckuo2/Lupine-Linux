@@ -18,8 +18,11 @@ no() {
         echo "n"
     done
 }
+
+#(cd $LINUX && make mrproper)
+
 mkdir -p $BUILDDIR
-rm $LINUX/.config
+rm -f $LINUX/.config
 for config in $CONFIGS; do
     cat $config >> $LINUX/.config
 done

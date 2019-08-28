@@ -37,12 +37,12 @@ run_test() {
     done
 }
 
-run_test host host /lat_syscall
+#run_test host host /lat_syscall
 # run_test hermitux hermitux /lat_syscall
 # run_test osv osv /lat_syscall
 # run_test vm $(pwd)/kernelbuild/microvm/vmlinux /lat_syscall
-# run_test vm $(pwd)/kernelbuild/lupine-djw-kml/vmlinux /lat_syscall
-# run_test vm $(pwd)/kernelbuild/lupine-djw-kml/vmlinux /trusted/lat_syscall
+run_test vm $(pwd)/kernelbuild/lupine-djw-kml/vmlinux /lat_syscall
+run_test vm $(pwd)/kernelbuild/lupine-djw-kml/vmlinux /trusted/lat_syscall
 
 
 
