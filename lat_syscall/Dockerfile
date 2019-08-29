@@ -7,4 +7,3 @@ ADD ./lat_syscall-static /trusted/lat_syscall-static
 ADD ./libc.so /libc.so
 ADD ./libc.so /trusted/libc.so
 
-ENTRYPOINT [ "/trusted/lat_syscall" ]

@@ -10,7 +10,7 @@ libc.so: always
 	&& cp $(MUSL_INSTALL_DIR)/lib/libc.so .
 
 lat_syscall-static: libc.so lat_syscall.c Makefile
-	$(MUSL_GCC) -o $@ -static lat_syscall.c lib_timing.c
+	$(MUSL_GCC) -g -o $@ -static lat_syscall.c lib_timing.c
 
 lat_syscall: libc.so lat_syscall.c Makefile
 	$(MUSL_GCC) -o $@ lat_syscall.c lib_timing.c
