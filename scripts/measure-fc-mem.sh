@@ -18,7 +18,7 @@ while [ $left -le $right ]; do
         --kernel $KERNEL \
         --root-drive=hello-world.ext2  \
         --kernel-opts="$KERNEL_OPTS" \
-        --memory=$mem 2> $VMM_STDERR > $VMM_STDOUT &;
+        --memory=$mem 2> $VMM_STDERR > $VMM_STDOUT &
 
     # if we do not see the desired output from the guest after this timeout we
     # consider it not working.
@@ -31,4 +31,4 @@ while [ $left -le $right ]; do
     fi
     rm $VMM_STDOUT $VMM_STDERR
 done
-$mem
+echo $mem
