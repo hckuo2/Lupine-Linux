@@ -21,10 +21,10 @@ while [ $left -le $right ]; do
         --memory=$mem 2> $VMM_STDERR > $VMM_STDOUT &
 
     # if we do not see the desired output from the guest after this timeout we
-    # consider it not working.
+    # consider the guest does not work.
     sleep 5
     pkill firecracker
-    if grep -q "Hello from Docker" $VMM_STDOUT; then
+    if grep -q "firecracker exited: status=0" $VMM_STDERR; then
         right=$(($mem - 1))
     else
         left=$(($mem + 1))
