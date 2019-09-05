@@ -1,0 +1,6 @@
+*.swp
+*.ext2
+*.ext4
+mnt/
+kernelbuild/
+
