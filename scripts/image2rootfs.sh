@@ -2,8 +2,7 @@
 # Usage: ./image2rootfs.sh app tag fs
 die() { echo "$*" 1>&2 ; exit 1; }
 
-app=$1
-tag=$2
+app=$1 tag=$2
 fs=${3:-ext2}
 
 container_id=$(docker create $app:$tag || die "run container failed.")
@@ -33,6 +32,7 @@ sudo mknod -m 444 $mnt/dev/urandom c 1 9
 sudo cp scripts/busybox-x86_64 $mnt
 sudo cp scripts/guest*.sh $mnt
 # install musl libc
-sudo cp scripts/libc.so $mnt
+sudo mkdir -p $mnt/trusted
+sudo cp scripts/libc.so $mnt/trusted/libc.so
 sudo umount $mnt
 rmdir $mnt
