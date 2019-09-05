@@ -11,4 +11,11 @@ if which redis-server; then
 fi
 ls -l /usr/local/bin
 ls -l /trusted
-$@
+echo $1
+if [[ $1 == "/trusted/"* ]]; then
+    echo "KML mode is really on!"
+    /trusted/libc.so $@
+else
+    echo "KML mode is really off!"
+    $@
+fi

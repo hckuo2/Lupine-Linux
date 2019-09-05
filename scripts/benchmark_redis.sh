@@ -14,7 +14,7 @@ for i in `seq 30`; do
         --kernel $KERNEL \
         --tap-device=tap100/AA:FC:00:00:00:01 \
         --root-drive=$APP.ext2 \
-        --kernel-opts="panic=-1 pci=off reboot=k tsc=reliable quiet 8250.nr_uarts=0 ipv6.disable=1 init=/guest_start.sh $BIN" &
+        --kernel-opts="panic=-1 pci=off reboot=k tsc=reliable quiet 8250.nr_uarts=1 ipv6.disable=1 init=/guest_start.sh $BIN" &
     sleep 3
     taskset -c 2 redis-benchmark -h 192.168.100.2 -t get,set --csv
     pkill -9 firecracker
