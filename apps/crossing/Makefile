@@ -1,5 +1,5 @@
 %: %.c
-	gcc -static $< -o $@
+	$(CC) $< -o $@
 
 clean:
 	rm -f crossing
