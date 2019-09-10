@@ -1,0 +1,47 @@
+>>>>> UNIKERNELS ARE SINGLE-PURPOSE
+      SERVER APPLICATIONS (NOT GENERAL SYSTEMS THAT
+      ALSO MANAGE HW)
+"needless generality"
+"cruft"
+"initrd stuff"
+"block options"
+"power management"
+"hotplug"
+"arch stuff"
+"device stuff"
+"input"
+"scsi"
+"deployment related?"
+
+>>>> UNIKERNELS ARE SINGLE USER/PROCESS/PROCESSOR
+"multiprocessing stuff"
+"permissions"
+
+>>>> UNIKERNELS RUN STUFF IN A SINGLE SECURITY DOMAIN
+"crypto and keys"
+"compression"
+"other lib stuff"
+"single security domain"
+
+>>>> UNIKERNELS ARE STATIC/IMMUTABLE
+"module stuff"
+
+>>>> UNIKERNELS ARE UNFIT FOR PRODUCTION
+"debugging stuff"
+"informational"
+
+>>>> UNIKERNELS ARE APP-SPECIFIC
+-> "networking"
+-> "fs stuff"
+-> "app specific"
+
+>>>> UNIKERNELS TRADE FOR FAST BOOT?
+>>>> UNIKERNELS TRADE FOR SIZE?
+"space/time tradeoffs"
+
+"probably we should have"
+
+"interrupts and timers"
+
+
+
