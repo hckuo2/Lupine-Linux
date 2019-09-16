@@ -30,7 +30,7 @@ int main(int argc, const char* argv[]) {
 
 	unsigned long elapsed_nanosecs = (ts_end.tv_nsec - ts_start.tv_nsec)
 		+ (ts_end.tv_sec - ts_start.tv_sec) * ONE_BILLION;
-	printf("Crossing rate: %f\n",
+	printf("Elapsed_time: %lu Crossing_Rate: %f\n", elapsed_nanosecs,
 			(double)COUNT/elapsed_nanosecs*ONE_BILLION);
 
 	return 0;
