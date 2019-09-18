@@ -3,7 +3,7 @@ VMMSOCKET=~/.firecracker.socket
 RESULT="measure-mm-result"
 KERNEL_OPTS="panic=-1 noapic nomodules pci=off "
 KERNEL_OPTS+="console=ttyS0  "
-TIMEOUT=5
+TIMEOUT=10
 
 cleanup-fc() {
     pkill -9 firecracker
@@ -14,7 +14,6 @@ measure_mem() {
     SYS=$1
     KERNEL=$2
     DISK=$3
-    echo $SYS $KERNEL $DISK
     shift
     shift
     shift
@@ -23,20 +22,19 @@ measure_mem() {
 
     left=0
     right=64
-    while [[ $left -lt $right ]]; do
+    result=$right
+    while [[ $left -le $right ]]; do
 
         rm $RESULT
         mem=$(((left+right)/ 2))
         echo $mem
+        sleep 4
 
         if [ x"$SYS" == "xvm" ]; then
-            [ -f hello-world.ext2 ] || ./scripts/image2rootfs.sh hello-world \
-                latest ext2
             # if we do not see the desired output from the guest after this
             # timeout we consider the guest does not work.
             ( sleep $TIMEOUT; cleanup-fc ) &
             sleep_pid=$(pgrep -P $!)
-            sleep 4
             firectl --firecracker-binary=$(pwd)/firecracker \
                 --kernel $KERNEL \
                 --root-drive=$DISK \
@@ -44,6 +42,7 @@ measure_mem() {
                 --ncpus=1 \
                 --socket-path=$VMMSOCKET \
                 --memory=$mem > $RESULT #2> /dev/null
+                # --tap-device=tap100/AA:FC:00:00:00:01 \
 
         elif [ x"$SYS" == "xhermitux" ]; then
             ( sleep $TIMEOUT; sudo pkill -f -9 hermitux-kernel) &
@@ -53,16 +52,18 @@ measure_mem() {
                 olivierpierre/hermitux \
                 /root/hermitux/hermitux-kernel/prefix/bin/proxy \
                 /root/hermitux/hermitux-kernel/prefix/x86_64-hermit/extra/tests/hermitux \
-                            /hermitux/hello > $RESULT
+                            $BIN > $RESULT
+            reset -w
         fi
         if [[ "$BIN" == *"hello"* ]]; then
             CONDITION='grep -q "hello" $RESULT'
         elif [[ "$BIN" == *"redis"* ]]; then
-            CONDITION='grep -q "Ready to accept connections" $RESULT'
+            CONDITION='grep -iq "Ready to accept connections" $RESULT'
         fi
 
         if eval $CONDITION; then
             right=$(($mem - 1))
+            result=$mem
         else
             left=$(($mem + 1))
         fi
@@ -70,11 +71,19 @@ measure_mem() {
         kill -9 $sleep_pid &> /dev/null
 
     done
-    echo $SYS "$BIN" $mem
+    echo $SYS $KERNEL "$BIN" $result
 }
 
+## hello
 measure_mem vm kernelbuild/lupine-djw-kml/vmlinux hello-world.ext2 /hello
+measure_mem vm kernelbuild/microvm/vmlinux hello-world.ext2 /hello
+measure_mem hermitux dummy dummy /hermitux/hello
+## redis
 measure_mem vm kernelbuild/lupine-djw-kml++redis/vmlinux redis.ext2 \
     /usr/local/bin/redis-server
-# measure_mem vm kernelbuild/microvm/vmlinux /hello | tail -n1 2>/dev/null
-# measure_mem hermitux dummy /hermitux/hello | tail -n1 | tail -n1
+measure_mem vm kernelbuild/microvm/vmlinux redis.ext2 \
+    /usr/local/bin/redis-server
+measure_mem hermitux dummy dummy /hermitux/redis-server
+## nginx
+# measure_mem vm kernelbuild/lupine-djw-kml++nginx/vmlinux nginx.ext2 /
+# measure_mem vm kernelbuild/microvm/vmlinux nginx.ext2 /hello
