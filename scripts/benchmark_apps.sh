@@ -18,7 +18,7 @@ run-benchmark() {
         if [[ $KML == "kml" ]]; then
             BIN=/trusted/nginx
         else
-            BIN=/sbin/nginx
+            BIN=/usr/sbin/nginx
         fi
     fi
     yes | ./scripts/image2rootfs.sh $TYPE alpine ext2
@@ -34,7 +34,7 @@ run-benchmark() {
             --kernel-opts="panic=-1 pci=off reboot=k tsc=reliable ipv6.disable=1 init=/guest_start.sh $BIN" &
 
         vm=$!
-        sleep 3
+        sleep 5
         if [[ $TYPE == "redis" ]]; then
             taskset -c 2 redis-benchmark --csv -h 192.168.100.2 -t get,set >> $LOG
         elif [[ $TYPE == "nginx" ]]; then
@@ -53,3 +53,5 @@ run-benchmark kml ./kernelbuild/lupine-djw-kml++redis/vmlinux redis
 run-benchmark kml ./kernelbuild/lupine-djw-kml-tiny++redis/vmlinux redis
 run-benchmark nokml ./kernelbuild/lupine-djw-nokml++redis/vmlinux redis
 run-benchmark nokml ./kernelbuild/lupine-djw-nokml-tiny++redis/vmlinux redis
+
+
