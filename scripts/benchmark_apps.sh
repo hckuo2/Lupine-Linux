@@ -44,14 +44,23 @@ run-benchmark() {
     done
 }
 
-run-benchmark kml ./kernelbuild/lupine-djw-kml++nginx/vmlinux nginx
-run-benchmark kml ./kernelbuild/lupine-djw-kml-tiny++nginx/vmlinux nginx
-run-benchmark nokml ./kernelbuild/lupine-djw-nokml++nginx/vmlinux nginx
-run-benchmark nokml ./kernelbuild/lupine-djw-nokml-tiny++nginx/vmlinux nginx
+# run-benchmark kml ./kernelbuild/lupine-djw-kml++nginx/vmlinux nginx
+# run-benchmark kml ./kernelbuild/lupine-djw-kml-tiny++nginx/vmlinux nginx
+# run-benchmark nokml ./kernelbuild/lupine-djw-nokml++nginx/vmlinux nginx
+# run-benchmark nokml ./kernelbuild/lupine-djw-nokml-tiny++nginx/vmlinux nginx
 
-run-benchmark kml ./kernelbuild/lupine-djw-kml++redis/vmlinux redis
-run-benchmark kml ./kernelbuild/lupine-djw-kml-tiny++redis/vmlinux redis
-run-benchmark nokml ./kernelbuild/lupine-djw-nokml++redis/vmlinux redis
-run-benchmark nokml ./kernelbuild/lupine-djw-nokml-tiny++redis/vmlinux redis
+# run-benchmark kml ./kernelbuild/lupine-djw-kml++redis/vmlinux redis
+# run-benchmark kml ./kernelbuild/lupine-djw-kml-tiny++redis/vmlinux redis
+# run-benchmark nokml ./kernelbuild/lupine-djw-nokml++redis/vmlinux redis
+# run-benchmark nokml ./kernelbuild/lupine-djw-nokml-tiny++redis/vmlinux redis
 
-
+for f in benchmark-logs/*.log; do
+    if [[ $f == *"redis"* ]]; then
+        printf "Redis $(basename $f | sed 's/djw-//' | sed 's/++redis//' | sed 's/.log//') "
+        grep GET $f | cut -d',' -f2 | tr -d '"' | st | tail -n1
+    fi
+    if [[ $f == *"nginx"* ]]; then
+        printf "Nginx $(basename $f | sed 's/djw-//' | sed 's/++nginx//' | sed 's/.log//') "
+        grep Request $f | awk '{print $4}' | st | tail -n1
+    fi
+done
