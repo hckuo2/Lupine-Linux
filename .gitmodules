@@ -1,3 +1,6 @@
 [submodule "linux"]
 	path = linux
 	url = https://github.com/torvalds/linux.git
+[submodule "osv"]
+	path = osv
+	url = https://github.com/cloudius-systems/osv.git
