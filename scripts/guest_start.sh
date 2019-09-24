@@ -3,11 +3,12 @@ export PATH="/usr/local/bin:$PATH"
 sh guest_net.sh
 mkdir -p /trusted
 
+echo "APP START"
+
 if which mysql; then
     echo ========NOKML=========
     MYSQL_ALLOW_EMPTY_PASSWORD=yes /entrypoint.sh mysqld
 fi
-
 if which nginx; then
     cp `which nginx` /trusted
     if echo $@ | grep trusted - > /dev/null; then
