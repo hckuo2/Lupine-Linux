@@ -9,6 +9,10 @@ if which mysql; then
     echo ========NOKML=========
     MYSQL_ALLOW_EMPTY_PASSWORD=yes /entrypoint.sh mysqld
 fi
+if which mongo; then
+    echo ========NOKML=========
+    /usr/local/bin/docker-entrypoint.sh mongod   
+fi
 if which nginx; then
     cp `which nginx` /trusted
     if echo $@ | grep trusted - > /dev/null; then
