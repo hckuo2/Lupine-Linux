@@ -30,7 +30,7 @@ sudo mknod -m 444 $mnt/dev/urandom c 1 9
 
 # install network setup script
 sudo cp scripts/busybox-x86_64 $mnt
-sudo cp scripts/guest*.sh $mnt
+sudo cp scripts/guest* $mnt
 # install musl libc
 sudo mkdir -p $mnt/trusted
 sudo cp scripts/libc.so $mnt/trusted/libc.so
