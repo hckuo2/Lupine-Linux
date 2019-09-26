@@ -6,6 +6,11 @@ build-env-image:
 	cd docker && \
 		docker build . -t linuxbuild:latest -f build-env.Dockerfile
 
+setup-osv:
+	git submodule update --init --recursive
+	pushd osv && \
+		sudo ./scripts/setup.py
+
 
 patch-linux:
 	cd linux && \

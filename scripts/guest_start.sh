@@ -32,6 +32,11 @@ if which postgres; then
     #/docker-entrypoint.sh postgres
 fi
 
+if which mongo; then
+    echo ========NOKML=========
+    /usr/local/bin/docker-entrypoint.sh mongod   
+fi
+
 if which nginx; then
     cp `which nginx` /trusted
     if echo $@ | grep trusted - > /dev/null; then
