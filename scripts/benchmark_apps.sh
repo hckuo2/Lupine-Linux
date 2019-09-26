@@ -3,13 +3,18 @@ source scripts/run-helper.sh
 ITER=30
 SERVER_CPUS=$(seq -s "," 0 2 $(nproc))
 CLIENT_CPUS=$(seq -s "," 1 2 $(nproc))
+encode-kernel-name() {
+    basename $(dirname $1) | sed 's/-djw//' \
+        | sed 's/++redis//' \
+        | sed 's/++nginx//'
+}
 run-benchmark() {
     TYPE=$1
     KML=$2
     TINY=$3
     KERNEL=$4
     APP=$5
-    LOG=benchmark-logs/$TYPE.$KML.$TINY.$APP.log
+    LOG=benchmark-logs/$APP.$(encode-kernel-name $KERNEL).log
     echo $LOG
     rm -f $LOG
     if [[ $TYPE == "vm" ]]; then
@@ -100,13 +105,16 @@ run-benchmark() {
 
 for f in benchmark-logs/*.log; do
     if [[ $f == *"redis"* ]]; then
-        printf "Redis-Get $(basename $f | sed 's/djw-//' | sed 's/++redis//' | sed 's/.log//') "
+        printf "Redis-Get "
+        printf "$(basename $f | sed 's/.log//' | cut -d'.' -f2) "
         grep GET $f | cut -d',' -f2 | tr -d '"' | st | tail -n1
-        printf "Redis-Set $(basename $f | sed 's/djw-//' | sed 's/++redis//' | sed 's/.log//') "
+        printf "Redis-Set "
+        printf "$(basename $f | sed 's/.log//' | cut -d'.' -f2) "
         grep SET $f | cut -d',' -f2 | tr -d '"' | st | tail -n1
     fi
     if [[ $f == *"nginx"* ]]; then
-        printf "Nginx $(basename $f | sed 's/djw-//' | sed 's/++nginx//' | sed 's/.log//') "
+        printf "Nginx "
+        printf "$(basename $f | sed 's/.log//' | cut -d'.' -f2) "
         grep Request $f | awk '{print $4}' | st | tail -n1
     fi
 done
