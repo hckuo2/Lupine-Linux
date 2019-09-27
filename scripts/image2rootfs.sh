@@ -16,7 +16,7 @@ trap "rm $app.tar" EXIT
 docker rm $container_id;
 mnt=$(mktemp -d)
 dd if=/dev/zero of=$app.$fs bs=1 count=0 seek=20G
-mkfs."$fs" "$app.$fs"
+yes | mkfs."$fs" "$app.$fs"
 sudo mount "$app.$fs" $mnt
 sudo tar -xvf $app.tar -C $mnt
 
