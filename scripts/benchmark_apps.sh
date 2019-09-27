@@ -115,6 +115,8 @@ for f in benchmark-logs/*.log; do
     if [[ $f == *"nginx"* ]]; then
         printf "Nginx "
         printf "$(basename $f | sed 's/.log//' | cut -d'.' -f2) "
-        grep Request $f | awk '{print $4}' | st | tail -n1
+        paste <(grep 'Complete requests' $f) <(grep 'Failed requests:' $f) \
+            <(grep 'Time taken for tests:' $f) \
+            | awk '{print ($3-$6)/$11}' | st | tail -n1
     fi
 done

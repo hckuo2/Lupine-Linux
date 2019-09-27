@@ -1,6 +1,5 @@
 #!/bin/bash
 
-#KERNEL=kernelbuild/lupine-djw-nokml++postgres/vmlinux
 APP=php
 TAG=alpine
 KERNEL=lupine-djw-nokml++php
@@ -9,8 +8,8 @@ INIT="/guest_start.sh"
 FS=$APP.ext2
 
 sudo killall firecracker
-#scripts/build-with-configs.sh nopatch configs/lupine-djw-nokml.config configs/postgres.config
-#scripts/build-with-configs.sh nopatch configs/microvm.config
+scripts/build-with-configs.sh nopatch configs/lupine-djw-nokml.config configs/php.config
+
 rm -f $FS
 scripts/image2rootfs.sh $APP $TAG ext2 >/dev/null 
 
