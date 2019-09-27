@@ -16,8 +16,8 @@ trap "rm $app.tar" EXIT
 docker rm $container_id;
 mnt=$(mktemp -d)
 dd if=/dev/zero of=$app.$fs bs=1 count=0 seek=20G
-mkfs.$fs $app.$fs
-sudo mount $app.$fs $mnt
+yes | mkfs."$fs" "$app.$fs"
+sudo mount "$app.$fs" $mnt
 sudo tar -xvf $app.tar -C $mnt
 
 # install devices
@@ -30,7 +30,7 @@ sudo mknod -m 444 $mnt/dev/urandom c 1 9
 
 # install network setup script
 sudo cp scripts/busybox-x86_64 $mnt
-sudo cp scripts/guest*.sh $mnt
+sudo cp scripts/guest* $mnt
 # install musl libc
 sudo mkdir -p $mnt/trusted
 sudo cp scripts/libc.so $mnt/trusted/libc.so
