@@ -24,6 +24,14 @@ if [ -f /usr/share/elasticsearch/bin/elasticsearch ]; then
     exit
 fi
 
+if [ -d "/usr/src/wordpress" ]; then
+    sh guest_net.sh
+    ./guest_load_entropy
+    echo ========NOKML=========
+    bash /usr/local/bin/docker-entrypoint.sh apache2-foreground
+    exit
+fi
+
 if which php; then
     echo ========NOKML=========
     ./guest_load_entropy 1000
