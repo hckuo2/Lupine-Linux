@@ -5,15 +5,37 @@ mkdir -p /trusted
 
 echo "APP START"
 
+if [ -f /usr/share/elasticsearch/bin/elasticsearch ]; then
+    echo ========NOKML=========
+    ./guest_load_entropy 1000
+    sh guest_net.sh
+    cd /usr/share/elasticsearch
+    rm -rf /usr/share/elasticsearch/data/nodes/*
+    export PATH=/usr/share/elasticsearch/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export ELASTIC_CONTAINER=true
+    export LD_LIBRARY_PATH=/usr/share/elasticsearch/jdk/lib
+    mount proc /proc -t proc
+    /sbin/sysctl fs.file-max=65535
+    /sbin/sysctl fs.file-nr=65535
+    ulimit -Hn 65535
+    ulimit -Sn 65535
+    /sbin/sysctl vm.max_map_count=262144
+    echo cluster.initial_master_nodes: node-1 >> /usr/share/elasticsearch/config/elasticsearch.yml
+    bash /usr/local/bin/docker-entrypoint.sh eswrapper
+    exit
+fi
+
 if which php; then
     echo ========NOKML=========
     ./guest_load_entropy 1000
     /usr/local/bin/php -r 'echo "hello\n";'
+    exit
 fi
 
 if which mysql; then
     echo ========NOKML=========
     MYSQL_ALLOW_EMPTY_PASSWORD=yes /entrypoint.sh mysqld
+    exit
 fi
 
 if which postgres; then
@@ -30,11 +52,13 @@ if which postgres; then
     sed -i s/"--pwfile=<(echo \"\\\$POSTGRES_PASSWORD\")"/"--pwfile=\/pw"/ docker-entrypoint.sh
     #    cat docker-entrypoint.sh | sed s/"--pwfile=<(echo \"\\\$POSTGRES_PASSWORD\")"/"--pwfile=\/tmp\/pw"/ | grep pwfile
     #/docker-entrypoint.sh postgres
+    exit
 fi
 
 if which mongo; then
     echo ========NOKML=========
     /usr/local/bin/docker-entrypoint.sh mongod   
+    exit
 fi
 
 if which nginx; then
@@ -46,7 +70,9 @@ if which nginx; then
         echo ========NOKML=========
         $@ -g 'daemon off;'
     fi
+    exit
 fi
+
 if which redis-server; then
     cp `which redis-server` /trusted
     if echo $@ | grep trusted - > /dev/null; then
@@ -56,4 +82,5 @@ if which redis-server; then
         echo ========NOKML=========
         $@
     fi
+    exit
 fi
