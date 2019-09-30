@@ -103,6 +103,8 @@ run-benchmark() {
 # run-benchmark osv dummy dummy nginx
 # run-benchmark osv dummy dummy redis
 
+run-benchmark hermitux dummy dummy redis
+
 for f in benchmark-logs/*.log; do
     if [[ $f == *"redis"* ]]; then
         printf "Redis-Get "
