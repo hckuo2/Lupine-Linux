@@ -67,7 +67,7 @@ fi
 if which mongo; then
     sh guest_net.sh
     echo ========NOKML=========
-    /usr/local/bin/docker-entrypoint.sh mongod   
+    /usr/local/bin/docker-entrypoint.sh mongod
     exit
 fi
 
@@ -76,10 +76,10 @@ if which nginx; then
     cp `which nginx` /trusted
     if echo $@ | grep trusted - > /dev/null; then
         echo ========KML=========
-        /trusted/libc.so /trusted/nginx -g 'daemon off;'
+        /trusted/libc.so /trusted/nginx -g 'daemon off;error_log stderr debug;'
     else
         echo ========NOKML=========
-        $@ -g 'daemon off;'
+        $@ -g 'daemon off;error_log stderr debug;'
     fi
     exit
 fi
