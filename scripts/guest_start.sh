@@ -1,6 +1,8 @@
 #!/bin/sh
 export PATH="/usr/local/bin:$PATH"
 mkdir -p /trusted
+mount -t proc proc /proc
+ulimit -n 65535
 
 echo "APP START"
 
