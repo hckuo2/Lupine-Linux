@@ -2,7 +2,7 @@
 
 KERNEL=$1
 total=0
-
+FCDIR=$(pwd)
 
 encode-kernel-name() {
     basename $(dirname $1) | sed 's/-djw//' \
@@ -27,7 +27,7 @@ measure-boot() {
             } &
             timeout=$!
             taskset -c $(seq -s',' 1 2 `nproc`) firectl \
-                --firecracker-binary=$(pwd)/firecracker \
+                --firecracker-binary=$FCDIR/firecracker \
                 --kernel=$KERNEL \
                 --root-drive=measure-boot.ext2  \
                 --firecracker-log=$LOG \
@@ -50,27 +50,30 @@ measure-boot() {
         mkfifo scripts/log.fifo
         ./scripts/build image=native-example fs=rofs > /dev/null 2>&1
         for i in $(seq 50); do
-            sudo FIRECRACKER_PATH=../firecracker ./scripts/firecracker.py -c 1 -m 512M
+            sudo FIRECRACKER_PATH=$FCDIR/firecracker ./scripts/firecracker.py -c 1 -m 512M
         done | grep Booted | awk '{print $4}' | tail -n30 | sort -nr | st | tail -n1
 
         printf "OSV-zfs "
         ./scripts/build image=native-example fs=zfs > /dev/null 2>&1
         for i in $(seq 50); do
-            sudo FIRECRACKER_PATH=../firecracker ./scripts/firecracker.py -c 1 -m 512M
+            sudo FIRECRACKER_PATH=$FCDIR/firecracker ./scripts/firecracker.py -c 1 -m 512M
         done | grep Booted | awk '{print $4}' | tail -n30 | sort -nr | st | tail -n1
         printf "OSV-ramfs "
         ./scripts/build image=native-example fs=ramfs > /dev/null 2>&1
         for i in $(seq 50); do
-            sudo FIRECRACKER_PATH=../firecracker ./scripts/firecracker.py -c 1 -m 512M
+            sudo FIRECRACKER_PATH=$FCDIR/firecracker ./scripts/firecracker.py -c 1 -m 512M
         done | grep Booted | awk '{print $4}' | tail -n30 | sort -nr | st | tail -n1
         popd
     fi
 }
 
-# measure-boot vm ./kernelbuild/microvm/vmlinux
-# measure-boot vm ./kernelbuild/lupine-djw-kml++base/vmlinux
-# measure-boot vm ./kernelbuild/lupine-djw-kml-tiny++base/vmlinux
-# measure-boot vm ./kernelbuild/lupine-djw-nokml++base/vmlinux
-# measure-boot vm ./kernelbuild/lupine-djw-nokml-tiny++base/vmlinux
+#measure-boot vm ./kernelbuild/microvm/vmlinux
+#measure-boot vm ./kernelbuild/lupine-djw-kml/vmlinux
+#measure-boot vm ./kernelbuild/lupine-djw-kml-tiny/vmlinux
+#measure-boot vm ./kernelbuild/lupine-djw-nokml/vmlinux
+#measure-boot vm ./kernelbuild/lupine-djw-nokml-tiny/vmlinux
+for f in kernelbuild/lupine-djw-nokml*; do 
+    measure-boot vm ./$f/vmlinux
+done
 # measure-boot hermitux dummy
-measure-boot osv dummy
+# measure-boot osv dummy
