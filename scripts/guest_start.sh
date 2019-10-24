@@ -6,6 +6,24 @@ ulimit -n 65535
 
 echo "APP START"
 
+if [ -f /usr/bin/stress-ng ]; then
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    cd /usr/src/linux-stable
+    #hyperfine --prepare 'make clean' --parameter-scan num_threads 1 12 'make -j {num_threads}'
+    #hyperfine --prepare 'make clean' --parameter-scan num_threads 20 100 -D 10 'make -j {num_threads}'
+    #hyperfine --prepare 'make clean' --parameter-scan num_threads 200 1000 -D 100 'make -j {num_threads}'
+    for r in `seq 1 10`
+    do
+        for i in 1 2 4 8 16 32 64 128 256 512 1024
+        do
+            stress-ng --sem $i -t 10 --metrics 2> /dev/null | grep sem-posix | grep -v dispatching | awk '{print '$i', $0}'
+            stress-ng --futex $i -t 10 --metrics 2> /dev/null | grep futex | grep -v dispatching | awk '{print '$i', $0}'
+        done
+    done
+
+    exit
+fi
+
 if [ -f /usr/share/elasticsearch/bin/elasticsearch ]; then
     echo ========NOKML=========
     ./guest_load_entropy 1000

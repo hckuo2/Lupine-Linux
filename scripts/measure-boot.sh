@@ -39,10 +39,11 @@ measure-boot() {
         done | grep boot-time | awk '{print $12}' | sort -n -r | tail -n30 | st | tail -n1
     elif [[ $TYPE == "hermitux" ]]; then
         printf "Hermitux "
-        docker run -v ~/hermitux:/hermitux --rm --privileged -it \
-            olivierpierre/hermitux bash /hermitux/measureboot.sh 50 \
-            | grep real | awk '{print $2}' | sed 's/[^0-9]//g' | sort -n -r \
-            | tail -n30 | st | tail -n1
+        #docker run -v ~/hermitux:/hermitux --rm --privileged -it \
+        #    olivierpierre/hermitux bash /hermitux/measureboot.sh 50 \
+        #    | grep real | awk '{print $2}' | sed 's/[^0-9]//g' | sort -n -r \
+        #    | tail -n30 | st | tail -n1
+	sudo docker run --privileged -it kollerr/hermitux hyperfine "HERMIT_VERBOSE=0 HERMIT_ISLE=uhyve HERMIT_TUX=1 HERMIT_DEBUG=0 HERMIT_PROFILE=0 HERMIT_MINIFS=0 HERMIT_MEM=2G HERMIT_MINIFS_HOSTLOAD=.minifs HERMIT_NETIF= HERMIT_IP= HERMIT_GATEWAY= /root/hermitux/hermitux-kernel/prefix/bin/proxy /root/hermitux/hermitux-kernel/prefix/x86_64-hermit/extra/tests/hermitux /root/hermitux/apps/test-clock-gettime/prog"
     elif [[ $TYPE == "osv" ]]; then
         pushd osv
         printf "OSV-rofs "
