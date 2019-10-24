@@ -8,6 +8,8 @@ table[ltp]="1.0,/opt/ltp/runltp -f syscalls -s getpid"
 table[redis]="5-alpine,/trusted/redis-server"
 table[httpd]="2-alpine,/trusted/httpd -DFOREGROUND"
 table[mongo]="4.0.10-xenial,/usr/local/bin/docker-entrypoint.sh mongod"
+SERVER_CPUS=$(seq -s "," 0 2 $(nproc))
+CLIENT_CPUS=$(seq -s "," 1 2 $(nproc))
 
 get_docker_tag() {
     ret=$(echo ${table[$1]} | cut -d',' -f1)

@@ -24,33 +24,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.035 seconds
+Time taken for tests:   4.079 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11068.24 [#/sec] (mean)
-Time per request:       9.035 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9133.46 [Kbytes/sec] received
+Requests per second:    24513.63 [#/sec] (mean)
+Time per request:       4.079 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20347.09 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    9   0.8      9      12
-Waiting:        0    9   0.8      9      12
-Total:          4    9   0.8      9      12
+Processing:     0    4   2.8      4     194
+Waiting:        0    4   2.8      4     193
+Total:          0    4   2.8      4     194
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     12
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      5
+ 100%    194 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -77,457 +78,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.101 seconds
+Time taken for tests:   3.994 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    10987.70 [#/sec] (mean)
-Time per request:       9.101 [ms] (mean)
-Time per request:       0.091 [ms] (mean, across all concurrent requests)
-Transfer rate:          9067.00 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.9      9      13
-Waiting:        0    9   0.9      9      13
-Total:          3    9   0.9      9      13
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     12
-  98%     12
-  99%     12
- 100%     13 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.910 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11223.23 [#/sec] (mean)
-Time per request:       8.910 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9261.36 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       5
-Processing:     0    9   0.5      9      12
-Waiting:        0    9   0.5      9      12
-Total:          4    9   0.5      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     11
-  99%     11
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.896 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11241.30 [#/sec] (mean)
-Time per request:       8.896 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9276.27 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       6
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.7      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.757 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11419.40 [#/sec] (mean)
-Time per request:       8.757 [ms] (mean)
-Time per request:       0.088 [ms] (mean, across all concurrent requests)
-Transfer rate:          9423.23 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.5      9      12
-Waiting:        0    9   0.5      9      12
-Total:          3    9   0.4      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%      9
-  99%      9
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   9.125 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    10959.14 [#/sec] (mean)
-Time per request:       9.125 [ms] (mean)
-Time per request:       0.091 [ms] (mean, across all concurrent requests)
-Transfer rate:          9043.43 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.6      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     10
-  98%     11
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.836 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11317.22 [#/sec] (mean)
-Time per request:       8.836 [ms] (mean)
-Time per request:       0.088 [ms] (mean, across all concurrent requests)
-Transfer rate:          9338.92 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.5      9      12
-Waiting:        0    9   0.5      9      12
-Total:          3    9   0.5      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     10
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.888 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11251.32 [#/sec] (mean)
-Time per request:       8.888 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9284.53 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.5      9      12
-Waiting:        0    9   0.5      9      12
-Total:          3    9   0.5      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     10
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.733 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11450.61 [#/sec] (mean)
-Time per request:       8.733 [ms] (mean)
-Time per request:       0.087 [ms] (mean, across all concurrent requests)
-Transfer rate:          9448.99 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.6      9      13
-Waiting:        0    9   0.6      9      13
-Total:          3    9   0.5      9      13
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     11
-  99%     12
- 100%     13 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.936 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11190.96 [#/sec] (mean)
-Time per request:       8.936 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9234.73 [Kbytes/sec] received
+Requests per second:    25036.30 [#/sec] (mean)
+Time per request:       3.994 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20780.92 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.6      9      12
+Processing:     0    4   2.8      4     188
+Waiting:        0    4   2.8      4     188
+Total:          0    4   2.8      4     188
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     10
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    188 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -554,33 +132,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   8.913 seconds
+Time taken for tests:   4.104 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11219.90 [#/sec] (mean)
-Time per request:       8.913 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9258.61 [Kbytes/sec] received
+Requests per second:    24369.32 [#/sec] (mean)
+Time per request:       4.104 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20227.31 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       5
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.6      9      12
+Connect:        0    0   0.3      0      17
+Processing:     0    4   2.8      4     193
+Waiting:        0    4   2.8      4     193
+Total:          0    4   2.9      4     193
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      6
+ 100%    193 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -607,33 +186,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   8.889 seconds
+Time taken for tests:   4.062 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11250.10 [#/sec] (mean)
-Time per request:       8.889 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9283.53 [Kbytes/sec] received
+Requests per second:    24617.43 [#/sec] (mean)
+Time per request:       4.062 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20433.25 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       5
-Processing:     0    9   0.6      9      12
-Waiting:        0    9   0.6      9      12
-Total:          3    9   0.6      9      12
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.9      4     195
+Waiting:        0    4   2.9      4     195
+Total:          0    4   2.9      4     195
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     11
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    195 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -660,33 +240,358 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   8.934 seconds
+Time taken for tests:   3.965 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11192.91 [#/sec] (mean)
-Time per request:       8.934 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9236.33 [Kbytes/sec] received
+Requests per second:    25217.98 [#/sec] (mean)
+Time per request:       3.965 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20931.72 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%    192 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.191 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    23861.23 [#/sec] (mean)
+Time per request:       4.191 [ms] (mean)
+Time per request:       0.042 [ms] (mean, across all concurrent requests)
+Transfer rate:          19805.58 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     190
+Waiting:        0    4   2.8      4     190
+Total:          0    4   2.8      4     190
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      5
+  95%      5
+  98%      5
+  99%      5
+ 100%    190 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.991 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25055.60 [#/sec] (mean)
+Time per request:       3.991 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20796.94 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%    192 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.957 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25271.24 [#/sec] (mean)
+Time per request:       3.957 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20975.93 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.7      4     188
+Waiting:        0    4   2.7      4     188
+Total:          0    4   2.7      4     188
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    188 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.059 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24633.84 [#/sec] (mean)
+Time per request:       4.059 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20446.86 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     190
+Waiting:        0    4   2.8      4     190
+Total:          0    4   2.8      4     190
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      5
+ 100%    190 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.003 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24979.06 [#/sec] (mean)
+Time per request:       4.003 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20733.41 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.7      4     190
+Waiting:        0    4   2.7      4     190
+Total:          0    4   2.7      4     190
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    190 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.975 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25156.90 [#/sec] (mean)
+Time per request:       3.975 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20881.03 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       4
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.6      9      12
+Processing:     0    4   2.8      4     189
+Waiting:        0    4   2.8      4     189
+Total:          0    4   2.8      4     189
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    189 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -713,33 +618,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.138 seconds
+Time taken for tests:   4.010 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    10943.90 [#/sec] (mean)
-Time per request:       9.138 [ms] (mean)
-Time per request:       0.091 [ms] (mean, across all concurrent requests)
-Transfer rate:          9030.86 [Kbytes/sec] received
+Requests per second:    24936.49 [#/sec] (mean)
+Time per request:       4.010 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20698.07 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    9   0.8      9      13
-Waiting:        0    9   0.8      9      13
-Total:          3    9   0.8      9      13
+Processing:     0    4   2.8      4     193
+Waiting:        0    4   2.8      4     193
+Total:          0    4   2.8      4     193
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     12
-  98%     12
-  99%     12
- 100%     13 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%    193 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -766,351 +672,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   8.734 seconds
+Time taken for tests:   4.083 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11449.84 [#/sec] (mean)
-Time per request:       8.734 [ms] (mean)
-Time per request:       0.087 [ms] (mean, across all concurrent requests)
-Transfer rate:          9448.36 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       3
-Processing:     0    9   0.6      9      12
-Waiting:        0    9   0.6      9      12
-Total:          3    9   0.6      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.989 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11124.34 [#/sec] (mean)
-Time per request:       8.989 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9179.75 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       6
-Processing:     0    9   0.6      9      12
-Waiting:        0    9   0.6      9      12
-Total:          3    9   0.5      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     11
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   9.047 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11053.65 [#/sec] (mean)
-Time per request:       9.047 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9121.42 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       3
-Processing:     0    9   0.6      9      12
-Waiting:        0    9   0.6      9      12
-Total:          3    9   0.6      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   9.118 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    10967.56 [#/sec] (mean)
-Time per request:       9.118 [ms] (mean)
-Time per request:       0.091 [ms] (mean, across all concurrent requests)
-Transfer rate:          9050.38 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       3
-Processing:     0    9   0.5      9      12
-Waiting:        0    9   0.5      9      12
-Total:          3    9   0.4      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     10
-  98%     10
-  99%     11
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   9.020 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11086.62 [#/sec] (mean)
-Time per request:       9.020 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9148.63 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       7
-Processing:     0    9   0.6      9      12
-Waiting:        0    9   0.6      9      12
-Total:          4    9   0.6      9      13
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     13 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   9.107 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    10981.10 [#/sec] (mean)
-Time per request:       9.107 [ms] (mean)
-Time per request:       0.091 [ms] (mean, across all concurrent requests)
-Transfer rate:          9061.55 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       7
-Processing:     0    9   0.9      9      12
-Waiting:        0    9   0.9      9      12
-Total:          3    9   0.8      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     12
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   9.043 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11058.30 [#/sec] (mean)
-Time per request:       9.043 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9125.26 [Kbytes/sec] received
+Requests per second:    24491.23 [#/sec] (mean)
+Time per request:       4.083 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20328.49 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       4
-Processing:     0    9   0.9      9      12
-Waiting:        0    9   0.9      9      12
-Total:          3    9   0.8      9      12
+Processing:     0    4   2.8      4     195
+Waiting:        0    4   2.8      4     195
+Total:          0    4   2.8      4     195
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     12
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      6
+ 100%    195 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -1137,33 +726,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.042 seconds
+Time taken for tests:   4.133 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11059.16 [#/sec] (mean)
-Time per request:       9.042 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9125.96 [Kbytes/sec] received
+Requests per second:    24197.39 [#/sec] (mean)
+Time per request:       4.133 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20084.60 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       6
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.6      9      12
-Total:          3    9   0.6      9      12
+Connect:        0    0   0.1      0       4
+Processing:     0    4   2.9      4     205
+Waiting:        0    4   2.9      4     205
+Total:          0    4   2.9      4     205
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      5
+  95%      5
+  98%      5
+  99%      6
+ 100%    205 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -1190,33 +780,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.013 seconds
+Time taken for tests:   4.140 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11094.95 [#/sec] (mean)
-Time per request:       9.013 [ms] (mean)
-Time per request:       0.090 [ms] (mean, across all concurrent requests)
-Transfer rate:          9155.50 [Kbytes/sec] received
+Requests per second:    24154.89 [#/sec] (mean)
+Time per request:       4.140 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20049.32 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.7      9      12
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     11
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      5
+  95%      5
+  98%      5
+  99%      5
+ 100%    192 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -1243,33 +834,196 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.233 seconds
+Time taken for tests:   4.043 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    10830.98 [#/sec] (mean)
-Time per request:       9.233 [ms] (mean)
-Time per request:       0.092 [ms] (mean, across all concurrent requests)
-Transfer rate:          8937.67 [Kbytes/sec] received
+Requests per second:    24734.85 [#/sec] (mean)
+Time per request:       4.043 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20530.71 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       4
+Processing:     0    4   2.8      4     191
+Waiting:        0    4   2.8      4     191
+Total:          0    4   2.8      4     191
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      6
+ 100%    191 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.066 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24594.38 [#/sec] (mean)
+Time per request:       4.066 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20414.12 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       4
+Processing:     0    4   2.8      4     190
+Waiting:        0    4   2.8      4     190
+Total:          0    4   2.8      4     190
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      5
+ 100%    190 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.990 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25064.75 [#/sec] (mean)
+Time per request:       3.990 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20804.54 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       4
+Processing:     0    4   2.7      4     188
+Waiting:        0    4   2.7      4     188
+Total:          0    4   2.7      4     188
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      6
+ 100%    188 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.977 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25143.56 [#/sec] (mean)
+Time per request:       3.977 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20869.95 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    9   0.8      9      12
-Waiting:        0    9   0.8      9      12
-Total:          3    9   0.8      9      13
+Processing:     0    4   2.7      4     189
+Waiting:        0    4   2.7      4     189
+Total:          0    4   2.7      4     189
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%     10
-  95%     12
-  98%     12
-  99%     12
- 100%     13 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    189 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -1296,247 +1050,34 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   9.142 seconds
+Time taken for tests:   4.135 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    10938.16 [#/sec] (mean)
-Time per request:       9.142 [ms] (mean)
-Time per request:       0.091 [ms] (mean, across all concurrent requests)
-Transfer rate:          9026.12 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       6
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.8      9      12
-Total:          3    9   0.7      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     10
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.930 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11198.38 [#/sec] (mean)
-Time per request:       8.930 [ms] (mean)
-Time per request:       0.089 [ms] (mean, across all concurrent requests)
-Transfer rate:          9240.85 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.8      9      12
-Waiting:        0    9   0.8      9      12
-Total:          3    9   0.8      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%     11
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.836 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11317.96 [#/sec] (mean)
-Time per request:       8.836 [ms] (mean)
-Time per request:       0.088 [ms] (mean, across all concurrent requests)
-Transfer rate:          9339.53 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.7      9      12
-Waiting:        0    9   0.7      9      12
-Total:          3    9   0.7      9      12
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.594 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11635.36 [#/sec] (mean)
-Time per request:       8.594 [ms] (mean)
-Time per request:       0.086 [ms] (mean, across all concurrent requests)
-Transfer rate:          9601.44 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    0   0.1      0       4
-Processing:     0    9   0.5      8      12
-Waiting:        0    8   0.5      8      12
-Total:          3    9   0.5      9      12
-WARNING: The median and mean for the processing time are not within a normal deviation
-        These results are probably not that reliable.
-
-Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     11
-  99%     12
- 100%     12 (longest request)
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
-
-Benchmarking 192.168.100.2 (be patient)
-Completed 10000 requests
-Completed 20000 requests
-Completed 30000 requests
-Completed 40000 requests
-Completed 50000 requests
-Completed 60000 requests
-Completed 70000 requests
-Completed 80000 requests
-Completed 90000 requests
-Completed 100000 requests
-Finished 100000 requests
-
-
-Server Software:        nginx/1.17.1
-Server Hostname:        192.168.100.2
-Server Port:            80
-
-Document Path:          /index.html
-Document Length:        612 bytes
-
-Concurrency Level:      100
-Time taken for tests:   8.757 seconds
-Complete requests:      100000
-Failed requests:        0
-Total transferred:      84500000 bytes
-HTML transferred:       61200000 bytes
-Requests per second:    11419.53 [#/sec] (mean)
-Time per request:       8.757 [ms] (mean)
-Time per request:       0.088 [ms] (mean, across all concurrent requests)
-Transfer rate:          9423.34 [Kbytes/sec] received
+Requests per second:    24181.96 [#/sec] (mean)
+Time per request:       4.135 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20071.79 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    9   0.6      9      12
-Waiting:        0    9   0.6      9      12
-Total:          3    9   0.6      9      12
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%     12
-  99%     12
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      5
+  95%      5
+  98%      5
+  99%      6
+ 100%    192 (longest request)
 This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
@@ -1563,30 +1104,517 @@ Document Path:          /index.html
 Document Length:        612 bytes
 
 Concurrency Level:      100
-Time taken for tests:   8.617 seconds
+Time taken for tests:   4.066 seconds
 Complete requests:      100000
 Failed requests:        0
-Total transferred:      84500000 bytes
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
 HTML transferred:       61200000 bytes
-Requests per second:    11604.70 [#/sec] (mean)
-Time per request:       8.617 [ms] (mean)
-Time per request:       0.086 [ms] (mean, across all concurrent requests)
-Transfer rate:          9576.15 [Kbytes/sec] received
+Requests per second:    24595.25 [#/sec] (mean)
+Time per request:       4.066 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20414.84 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      5
+ 100%    192 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.973 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25168.69 [#/sec] (mean)
+Time per request:       3.973 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20890.81 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       4
-Processing:     0    9   0.5      9      12
-Waiting:        0    9   0.5      9      12
-Total:          4    9   0.4      9      12
+Processing:     0    4   2.8      4     191
+Waiting:        0    4   2.8      4     191
+Total:          0    4   2.8      4     191
 
 Percentage of the requests served within a certain time (ms)
-  50%      9
-  66%      9
-  75%      9
-  80%      9
-  90%      9
-  95%      9
-  98%      9
-  99%     10
- 100%     12 (longest request)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    191 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.993 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    25044.52 [#/sec] (mean)
+Time per request:       3.993 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20787.74 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      6
+ 100%    192 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.031 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24807.44 [#/sec] (mean)
+Time per request:       4.031 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20590.96 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     193
+Waiting:        0    4   2.8      4     193
+Total:          0    4   2.8      4     193
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      5
+ 100%    193 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.162 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24027.48 [#/sec] (mean)
+Time per request:       4.162 [ms] (mean)
+Time per request:       0.042 [ms] (mean, across all concurrent requests)
+Transfer rate:          19943.57 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     187
+Waiting:        0    4   2.8      4     187
+Total:          0    4   2.8      4     187
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      5
+  95%      5
+  98%      5
+  99%      6
+ 100%    187 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.025 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24845.79 [#/sec] (mean)
+Time per request:       4.025 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20622.80 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       4
+Processing:     0    4   2.8      4     191
+Waiting:        0    4   2.8      4     191
+Total:          0    4   2.8      4     191
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%    191 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.034 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24787.83 [#/sec] (mean)
+Time per request:       4.034 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20574.68 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     192
+Waiting:        0    4   2.8      4     192
+Total:          0    4   2.8      4     192
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%    192 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.032 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24800.04 [#/sec] (mean)
+Time per request:       4.032 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20584.82 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   3.1      4     206
+Waiting:        0    4   3.1      4     206
+Total:          0    4   3.1      4     206
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      4
+  99%      5
+ 100%    206 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.011 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24929.90 [#/sec] (mean)
+Time per request:       4.011 [ms] (mean)
+Time per request:       0.040 [ms] (mean, across all concurrent requests)
+Transfer rate:          20692.61 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.8      4     190
+Waiting:        0    4   2.8      4     190
+Total:          0    4   2.8      4     191
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      4
+  98%      5
+  99%      6
+ 100%    191 (longest request)
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 192.168.100.2 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        nginx/1.17.1
+Server Hostname:        192.168.100.2
+Server Port:            80
+
+Document Path:          /index.html
+Document Length:        612 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.146 seconds
+Complete requests:      100000
+Failed requests:        0
+Keep-Alive requests:    99049
+Total transferred:      84995245 bytes
+HTML transferred:       61200000 bytes
+Requests per second:    24117.95 [#/sec] (mean)
+Time per request:       4.146 [ms] (mean)
+Time per request:       0.041 [ms] (mean, across all concurrent requests)
+Transfer rate:          20018.66 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     0    4   2.9      4     198
+Waiting:        0    4   2.9      4     198
+Total:          0    4   2.9      4     198
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      5
+ 100%    198 (longest request)
