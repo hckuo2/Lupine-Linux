@@ -95,9 +95,10 @@ run-benchmark() {
             popd
         done
     elif [[ $TYPE == "rump-hvt" ]]; then
+        delete_current_tap
+        create_current_tap
+        sleep 1
         for i in `seq $ITER`; do
-            delete_tap $TAP
-            create_current_tap
             if [[ $APP == "redis" ]]; then
                 touch /tmp/disk
                 taskset -c $SERVER_CPUS sudo ./scripts/solo5-hvt \
@@ -120,29 +121,29 @@ run-benchmark() {
                         -c 100 192.168.100.2/index.html >> $LOG 2>&1
                 fi
             fi
-            pkill -9 solo5-hvt
+            sudo pkill -9 solo5-hvt
         done
     fi
 }
 
 for apptype in conn sess; do
     # run-benchmark vm nokml notiny ./kernelbuild/microvm/vmlinux nginx $apptype
-    run-benchmark vm kml notiny ./kernelbuild/lupine-djw-kml++nginx/vmlinux nginx $apptype
-    run-benchmark vm kml tiny ./kernelbuild/lupine-djw-kml-tiny++nginx/vmlinux nginx $apptype
+    # run-benchmark vm kml notiny ./kernelbuild/lupine-djw-kml++nginx/vmlinux nginx $apptype
+    # run-benchmark vm kml tiny ./kernelbuild/lupine-djw-kml-tiny++nginx/vmlinux nginx $apptype
     # run-benchmark vm nokml notiny ./kernelbuild/lupine-djw-nokml++nginx/vmlinux nginx $apptype
     # run-benchmark vm nokml tiny ./kernelbuild/lupine-djw-nokml-tiny++nginx/vmlinux nginx $apptype
-    run-benchmark vm dummy dummy ./kernelbuild/microvm/vmlinux nginx $apptype
+    # run-benchmark vm dummy dummy ./kernelbuild/microvm/vmlinux nginx $apptype
     run-benchmark rump-hvt dummy dmmy rump-hvt/dummy nginx $apptype
     # run-benchmark osv dummy dummy osv/dummy nginx $apptype
 done
-run-benchmark rump-hvt dummy dmmy rump-hvt/dummy redis
+# run-benchmark rump-hvt dummy dmmy rump-hvt/dummy redis
 # run-benchmark vm nokml notiny ./kernelbuild/microvm/vmlinux redis
 # run-benchmark vm kml notiny ./kernelbuild/lupine-djw-kml++redis/vmlinux redis
 # run-benchmark vm kml tiny ./kernelbuild/lupine-djw-kml-tiny++redis/vmlinux redis
 # run-benchmark vm nokml notiny ./kernelbuild/lupine-djw-nokml++redis/vmlinux redis
 # run-benchmark vm nokml tiny ./kernelbuild/lupine-djw-nokml-tiny++redis/vmlinux redis
 
-# run-benchmark osv dummy dummy redis
+run-benchmark osv dummy dummy redis
 
 # run-benchmark hermitux dummy dummy redis
 

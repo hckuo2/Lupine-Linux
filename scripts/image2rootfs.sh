@@ -4,6 +4,7 @@ die() { echo "$*" 1>&2 ; exit 1; }
 
 app=$1 tag=$2
 fs=${3:-ext2}
+echo $app $tag
 
 container_id=$(docker create $app:$tag || die "run container failed.")
 if [ "$container_id" == "" ]; then

@@ -5,14 +5,6 @@ itr=20
 types="null read write"
 osv=~/osv
 
-mean() {
-    awk '{sum+=$1}END{print sum/NR}'
-}
-
-stat() {
-    awk '{x+=$0;y+=$0^2}END{print x/NR, sqrt(y/NR-(x/NR)^2)}'
-}
-
 run_test() {
     SYS=$1
     KERNEL=$2
