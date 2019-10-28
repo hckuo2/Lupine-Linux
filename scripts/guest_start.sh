@@ -6,6 +6,13 @@ ulimit -n 65535
 
 echo "APP START"
 
+if [ -f /usr/bin/influxd ]; then
+	sh guest_net.sh
+	sh /init-influxdb.sh
+	/usr/bin/influxd
+	exit
+fi
+
 if [ -f /opt/rabbitmq/sbin/rabbitmq-server ]; then
 	sh guest_net.sh
 	mkdir -p /var/lib/rabbitmq
