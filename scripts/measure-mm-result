@@ -1,0 +1,2 @@
+2019-09-30T14:29:14.752942568 [anonymous-instance:INFO:api_server/src/http_service.rs:652] The API server received a synchronous Put request on "/logger" with body "{\"show_level\": true, \"level\": \"Info\", \"metrics_fifo\": \"metrics.fifo\", \"show_log_origin\": true, \"log_fifo\": \"log.fifo\"}".
+OSv v0.54.0
