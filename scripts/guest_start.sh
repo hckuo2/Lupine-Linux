@@ -6,6 +6,17 @@ ulimit -n 65535
 
 echo "APP START"
 
+if [ -f /usr/lib/jvm/java-1.8-openjdk/bin/javac ]; then
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/jvm/java-1.8-openjdk/jre/bin:/usr/lib/jvm/java-1.8-openjdk/bin
+    export LANG=C.UTF-8
+    export JAVA_HOME=/usr/lib/jvm/java-1.8-openjdk
+    export JAVA_VERSION=8u171
+    echo "class HelloWorld { public static void main(String args[]) {System.out.println(\"Hello, World\");}}"  > hello.java
+    javac hello.java
+    java HelloWorld
+    exit
+fi
+
 if which mysqld; then
     sh guest_net.sh
     export MYSQL_ALLOW_EMPTY_PASSWORD=1
