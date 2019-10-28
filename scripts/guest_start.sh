@@ -6,6 +6,15 @@ ulimit -n 65535
 
 echo "APP START"
 
+
+if [ -f /usr/local/go/bin/go ]; then
+    echo "package main" >> test.go
+    echo "func main() {}" >> test.go
+    /usr/local/go/bin/go build test.go
+    ./test
+    exit
+fi
+
 if [ -f /usr/local/bin/traefik ]; then
     sh guest_net.sh
     /usr/local/bin/traefik
