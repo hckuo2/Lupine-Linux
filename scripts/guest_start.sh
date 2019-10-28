@@ -6,6 +6,56 @@ ulimit -n 65535
 
 echo "APP START"
 
+if [ -f /opt/rabbitmq/sbin/rabbitmq-server ]; then
+	sh guest_net.sh
+	mkdir -p /var/lib/rabbitmq
+	mkdir -p /rabbitmq-env
+	/load_entropy
+	export PATH=/opt/rabbitmq/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+	export OPENSSL_VERSION=1.1.1d
+	export OPENSSL_SOURCE_SHA256=1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2
+	export OPENSSL_PGP_KEY_IDS=0x8657ABB260F056B1E5190839D9C4D26D0E604491
+	export OTP_VERSION=22.1.4
+	export OTP_SOURCE_SHA256=982e940c8c3313b1af27938655b4e90991d54bd6720b238c25438c16bc51699f
+	export RABBITMQ_DATA_DIR=/var/lib/rabbitmq
+	export RABBITMQ_VERSION=3.8.0
+	export RABBITMQ_PGP_KEY_ID=0x0A9AF2115F4687BD29803A206B73A36E6026DFCA
+	export RABBITMQ_HOME=/opt/rabbitmq
+	export RABBITMQ_LOGS=-
+	export RABBITMQ_SASL_LOGS=-
+	export HOME=/var/lib/rabbitmq
+	export LANG=C.UTF-8
+	export LANGUAGE=C.UTF-8
+	export LC_ALL=C.UTF-8
+
+	export RABBITMQ_DEFAULT_PASS=
+	export LC_ALL=C.UTF-8
+	export RABBITMQ_SSL_FAIL_IF_NO_PEER_CERT=true
+	export LANG=C.UTF-8
+	export HOSTNAME=d9975fcce12b
+	export OPENSSL_VERSION=1.1.1d
+	export OTP_VERSION=22.1.4
+	export RABBITMQ_SASL_LOGS=-
+	export RABBITMQ_HOME=/opt/rabbitmq
+	export RABBITMQ_MANAGEMENT_SSL_FAIL_IF_NO_PEER_CERT=false
+	export RABBITMQ_MANAGEMENT_SSL_VERIFY=verify_none
+	export RABBITMQ_LOGS=-
+	export RABBITMQ_VERSION=3.8.0
+	export RABBITMQ_DATA_DIR=/var/lib/rabbitmq
+	export RABBITMQ_SSL_VERIFY=verify_peer
+	export RABBITMQ_PGP_KEY_ID=0x0A9AF2115F4687BD29803A206B73A36E6026DFCA
+	export SHLVL=1
+	export LANGUAGE=C.UTF-8
+	export OPENSSL_SOURCE_SHA256=1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2
+	export RABBITMQ_DEFAULT_USER=
+	export PATH=/opt/rabbitmq/sbin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+	export OTP_SOURCE_SHA256=982e940c8c3313b1af27938655b4e90991d54bd6720b238c25438c16bc51699f
+	
+	echo 127.0.0.1    d9975fcce12b > /etc/hosts
+	docker-entrypoint.sh rabbitmq-server
+	exit
+fi
+
 if [ -f /usr/lib/jvm/java-1.8-openjdk/bin/javac ]; then
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/jvm/java-1.8-openjdk/jre/bin:/usr/lib/jvm/java-1.8-openjdk/bin
     export LANG=C.UTF-8
