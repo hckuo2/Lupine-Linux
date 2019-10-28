@@ -6,6 +6,12 @@ ulimit -n 65535
 
 echo "APP START"
 
+if [ -f /usr/local/bin/traefik ]; then
+    sh guest_net.sh
+    /usr/local/bin/traefik
+    exit
+fi
+
 if [ -f /usr/local/bin/memcached ]; then
     sh guest_net.sh
     /usr/local/bin/memcached -u memcache -m 1024 -l 192.168.100.2 -p 11211
