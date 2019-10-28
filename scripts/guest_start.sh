@@ -6,6 +6,18 @@ ulimit -n 65535
 
 echo "APP START"
 
+
+if [ -f /usr/local/apache2/bin/httpd ]; then
+    export PATH=/usr/local/apache2/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    export HTTPD_PREFIX=/usr/local/apache2
+    export HTTPD_VERSION=2.4.41
+    export HTTPD_SHA256=133d48298fe5315ae9366a0ec66282fa4040efa5d566174481077ade7d18ea40
+    sh guest_net.sh
+    ./guest_load_entropy
+    cd /usr/local/apache2
+    httpd-foreground
+fi
+
 if [ -f /usr/bin/stress-ng ]; then
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     cd /usr/src/linux-stable
