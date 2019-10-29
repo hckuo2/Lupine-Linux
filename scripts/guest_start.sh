@@ -6,6 +6,42 @@ ulimit -n 65535
 
 echo "APP START"
 
+if which haproxy; then
+	echo "haproxy"
+	sh /guest_net.sh
+	/load_entropy
+cat > /haproxy.cfg << "EOF"
+global
+    log 127.0.0.1 local0
+    maxconn 4096
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    retries 3
+    option redispatch
+    contimeout 5000
+    clitimeout 50000
+    srvtimeout 50000
+
+frontend http-in
+    bind *:80
+    acl myapp-frontend hdr(host) -i mydomain.com
+    use_backend myapp-backend if myapp-frontend
+
+backend myapp-backend
+    balance roundrobin
+    option http-server-close
+    server myapp-server-1 localhost:80 check
+EOF
+	echo 127.0.0.1    localhost > /etc/hosts
+	haproxy -c -f /haproxy.cfg
+	haproxy -f /haproxy.cfg
+	exit
+fi
+
 if [ -f /usr/bin/influxd ]; then
 	sh guest_net.sh
 	sh /init-influxdb.sh
