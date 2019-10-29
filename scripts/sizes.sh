@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APPS="php python node wordpress mysql mongo postgres elasticsearch redis nginx"
+APPS="elasticsearch haproxy httpd mariadb mongo nginx openjdk postgres rabbitmq traefik go hello-world influxdb memcached mysql node php python redis wordpress"
 OTHER="no-dev-multi no-dev"
 BASE="lupine-djw"
 BASEOPTS="-kml -nokml -kml-tiny -nokml-tiny"
@@ -12,7 +12,7 @@ get_app_size() {
     echo $(get_size "$BASE$1++$2")
 }
 get_config_size() {
-    cat configs/$1.config | grep "^CONFIG" | wc -l
+    cat configs/apps/$1.config | grep "^CONFIG" | wc -l
 }
 
 
@@ -77,5 +77,3 @@ for a in $APPS; do
     p=`echo "scale=4; ($(get_app_size "-kml" $a).0/$(get_size $BASE-kml))*100 - 100" | bc`
     echo "$a $(get_config_size $a) $p"
 done | sort -n -k 2
-
-
