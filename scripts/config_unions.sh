@@ -1,17 +1,27 @@
 #!/bin/bash
 
-#ordered by stars
-APP[0]=nginx
-APP[1]=mysql
-APP[2]=node
-APP[3]=redis
-APP[4]=postgres
-APP[5]=mongo
-APP[6]=php
-APP[7]=python
-APP[8]=elasticsearch
-APP[9]=wordpress
-NUM_APPS=10
+APP[0]=wordpress
+APP[1]=elasticsearch
+APP[2]=go
+APP[3]=haproxy
+APP[4]=hello-world
+APP[5]=httpd
+APP[6]=influxdb
+APP[7]=mariadb
+APP[8]=memcached
+APP[9]=mongo
+APP[10]=mysql
+APP[11]=nginx
+APP[12]=node
+APP[13]=openjdk
+APP[14]=php
+APP[15]=postgres
+APP[16]=python
+APP[17]=rabbitmq
+APP[18]=redis
+APP[19]=traefik
+
+NUM_APPS=20
 
 for ((i=0;i<$NUM_APPS;i++)); do
     echo -n "$((i+1)) "
