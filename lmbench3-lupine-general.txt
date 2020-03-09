@@ -1,0 +1,68 @@
+                 L M B E N C H  3 . 0   S U M M A R Y
+                 ------------------------------------
+                 (Alpha software, do not distribute)
+
+
+Processor, Processes - times in microseconds - smaller is better
+------------------------------------------------------------------------------
+Host                 OS  Mhz null null      open slct sig  sig  fork exec sh
+                             call  I/O stat clos TCP  inst hndl proc proc proc
+--------- ------------- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
+ece7bb507 Linux 3.14.35 2960 0.08 0.14 0.64 1.22 2.74 0.15 0.76 94.0 326. 1065
+
+Basic integer operations - times in nanoseconds - smaller is better
+-------------------------------------------------------------------
+Host                 OS  intgr intgr  intgr  intgr  intgr
+                          bit   add    mul    div    mod
+--------- ------------- ------ ------ ------ ------ ------
+ece7bb507 Linux 3.14.35 0.3400 0.0400 1.0700 7.4900 8.3700
+
+Basic float operations - times in nanoseconds - smaller is better
+-----------------------------------------------------------------
+Host                 OS  float  float  float  float
+                         add    mul    div    bogo
+--------- ------------- ------ ------ ------ ------
+ece7bb507 Linux 3.14.35 1.0400 1.7300 4.5600 2.4300
+
+Basic double operations - times in nanoseconds - smaller is better
+------------------------------------------------------------------
+Host                 OS  double double double double
+                         add    mul    div    bogo
+--------- ------------- ------  ------ ------ ------
+ece7bb507 Linux 3.14.35 1.0400 1.7300 6.9100 4.8300
+
+Context switching - times in microseconds - smaller is better
+-------------------------------------------------------------------------
+Host                 OS  2p/0K 2p/16K 2p/64K 8p/16K 8p/64K 16p/16K 16p/64K
+                         ctxsw  ctxsw  ctxsw ctxsw  ctxsw   ctxsw   ctxsw
+--------- ------------- ------ ------ ------ ------ ------ ------- -------
+ece7bb507 Linux 3.14.35   12.6   14.7   18.0   20.7   26.3    23.3    28.4
+
+*Local* Communication latencies in microseconds - smaller is better
+---------------------------------------------------------------------
+Host                 OS 2p/0K  Pipe AF     UDP  RPC/   TCP  RPC/ TCP
+                        ctxsw       UNIX         UDP         TCP conn
+--------- ------------- ----- ----- ---- ----- ----- ----- ----- ----
+ece7bb507 Linux 3.14.35  12.6 4.104 5.21  10.2        14.0        46.
+
+File & VM system latencies in microseconds - smaller is better
+-------------------------------------------------------------------------------
+Host                 OS   0K File      10K File     Mmap    Prot   Page   100fd
+                        Create Delete Create Delete Latency Fault  Fault  selct
+--------- ------------- ------ ------ ------ ------ ------- ----- ------- -----
+ece7bb507 Linux 3.14.35   17.4   11.4  159.0   35.0  2641.0 0.256   293.1 1.241
+
+*Local* Communication bandwidths in MB/s - bigger is better
+-----------------------------------------------------------------------------
+Host                OS  Pipe AF    TCP  File   Mmap  Bcopy  Bcopy  Mem   Mem
+                             UNIX      reread reread (libc) (hand) read write
+--------- ------------- ---- ---- ---- ------ ------ ------ ------ ---- -----
+ece7bb507 Linux 3.14.35 4181 4978 3518  103.8 1368.1  328.9  565.6 1040 731.2
+
+Memory latencies in nanoseconds - smaller is better
+    (WARNING - may not be correct, check graphs)
+------------------------------------------------------------------------------
+Host                 OS   Mhz   L1 $   L2 $    Main mem    Rand mem    Guesses
+--------- -------------   ---   ----   ----    --------    --------    -------
+ece7bb507 Linux 3.14.35  2960   10.9   42.9  209.1
+
