@@ -18,7 +18,7 @@ as small as 4+MB. We aim to show that it has the following unikernel properties
 
 ## Setup
 Clone project:
-`git clone https://github.com/Lupine-Linux.git`
+`git clone https://github.com/hckuo/Lupine-Linux.git`
 
 Update submodule:
 `git submodule update --init`
