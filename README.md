@@ -1,4 +1,4 @@
-# Linux in Unikernel Clothes (LUC)
+# Lupine: Linux in Unikernel Clothes
 
 In this project, we manually configure the Linux kernel so that it becomes
 as small as 4+MB. We aim to show that it has the following unikernel properties
@@ -18,7 +18,7 @@ as small as 4+MB. We aim to show that it has the following unikernel properties
 
 ## Setup
 Clone project:
-`git clone https://github.ibm.com/hckuo-ibm/luc.git`
+`git clone https://github.com/Lupine-Linux.git`
 
 Update submodule:
 `git submodule update --init`
