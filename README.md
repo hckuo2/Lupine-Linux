@@ -46,6 +46,7 @@ Update submodule:
 ## Files
 ```
 scripts
+|-- build-kernels.sh (build all kernels for helloworld, redis and ngnix for all variants)
 |-- firecrackerd.sh (wrapper firecracker daeomn)
 |-- firecracker-run.sh (wrapper of firecrakcer client)
 |-- image2rootfs.sh (create userspace root fs from docker image)
