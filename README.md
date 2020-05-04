@@ -53,6 +53,7 @@ scripts
 |-- firecracker-lz4bench-run.sh (runs lz4 bench as a firecracker microvm lupine+kml+mmio)
 `-- run-helper.sh (shared variables and helper functions)
 ```
+> Theses scripts should be executed at the root directory.
 
 ## Takeaways:
 - don't rewrite Linux unikernel people!
