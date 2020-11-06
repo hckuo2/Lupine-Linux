@@ -8,7 +8,7 @@ INIT="/guest_start.sh"
 FS=$APP.ext2
 
 sudo killall firecracker
-scripts/build-with-configs.sh nopatch configs/lupine-djw-nokml.config configs/postgres.config
+scripts/build-with-configs.sh nopatch configs/lupine-djw-nokml.config configs/apps/postgres.config
 
 rm -f $FS
 scripts/image2rootfs.sh $APP $TAG ext2 >/dev/null 
