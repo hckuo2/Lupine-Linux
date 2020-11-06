@@ -9,7 +9,7 @@ INIT="/bin/sh"
 FS=$APP.ext2
 
 sudo killall firecracker
-scripts/build-with-configs.sh nopatch configs/lupine-djw-nokml.config configs/mariadb.config
+scripts/build-with-configs.sh nopatch configs/lupine-djw-nokml.config configs/apps/mariadb.config
 
 rm -f $FS
 scripts/image2rootfs.sh $APP $TAG ext2 >/dev/null 
