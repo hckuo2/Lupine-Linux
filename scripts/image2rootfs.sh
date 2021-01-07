@@ -28,6 +28,7 @@ sudo mknod -m 666 $mnt/dev/ptmx c 5 2
 sudo mknod -m 666 $mnt/dev/tty c 5 0
 sudo mknod -m 444 $mnt/dev/random c 1 8
 sudo mknod -m 444 $mnt/dev/urandom c 1 9
+sudo mknod -m 660 $mnt/dev/mem c 1 1
 
 # install network setup script
 sudo cp scripts/busybox-x86_64 $mnt
