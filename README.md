@@ -1,5 +1,8 @@
 # Lupine: Linux in Unikernel Clothes
 
+## NOTE
+The container image for building the kernel (Linux 4.0) is not available anymore but you can use an older Ubuntu image to build it. We use apline-variant applications that use musl-libc for our benchmarks. PRs are welcomed!
+
 **[Paper](https://dl.acm.org/doi/10.1145/3342195.3387526)**
 
 ```
