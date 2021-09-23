@@ -46,6 +46,18 @@ Clone project:
 Update submodule:
 `git submodule update --init`
 
+Pull a docker image that contain the environment for building Linux 4.0, and create a tag `linuxbuild:latest` refer to this image:
+`docker tag source:tag linuxbuild:latest`, you can download the image that I used: `docker pull a74731248/linuxbuild:latest`
+
+Run `make` command in the content `load_entropy` to generate `load_entropy` file.
+
+Build rootfs:
+`sh image2rootfs.sh app tag ext2`, the tag must be `alpine`, because Lupine use musl libc rather than glibc.
+
+Run Lupine-Linux:
+- run `sh firecrackerd.sh` in first shell
+- run `sh firecracker-run.sh path_to_kernel path_to_rootfs init` in second shell, the `init` can be `/bin/sh` or some scripts that you want to run after Lupine bootup.
+
 ## Files
 ```
 scripts
