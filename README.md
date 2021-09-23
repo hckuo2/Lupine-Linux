@@ -47,7 +47,7 @@ Update submodule:
 `git submodule update --init`
 
 Pull a docker image that contain the environment for building Linux 4.0, and create a tag `linuxbuild:latest` refer to this image:
-`docker tag source:tag linuxbuild:latest`
+`docker tag source:tag linuxbuild:latest`, you can download the image that I used: `docker pull a74731248/linuxbuild:latest`
 
 Run `make` command in the content `load_entropy` to generate `load_entropy` file.
 
