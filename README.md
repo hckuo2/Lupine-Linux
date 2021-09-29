@@ -40,23 +40,40 @@ as small as 4+MB. We aim to show that it has the following unikernel properties
   optimization
 
 ## Setup
-Clone project:
+1. Clone project:
 `git clone https://github.com/hckuo/Lupine-Linux.git`
 
-Update submodule:
+2. Update submodule:
 `git submodule update --init`
 
-Pull a docker image that contain the environment for building Linux 4.0, and create a tag `linuxbuild:latest` refer to this image:
-`docker tag source:tag linuxbuild:latest`, you can download the image that I used: `docker pull a74731248/linuxbuild:latest`
+3. Pull a docker image that contains the environment for building Linux 4.0 kernel, and create a tag `linuxbuild:latest`. Run the below commands:
+    * `docker pull a74731248/linuxbuild:latest`
+    * `docker tag a74731248/linuxbuild:latest linuxbuild:latest`
 
-Run `make` command in the content `load_entropy` to generate `load_entropy` file.
-
-Build rootfs:
+4. Run `make` command in the content `load_entropy` to generate `load_entropy` file
+5. Build the Lupine unikernel of your interest by following ***one*** of the below steps:
+    * run `sh scripts/build-kernels.sh`
+    * run `sh scripts/build-with-configs.sh configs/<specific_config> <app_config>`  
+       For Eg: `sh scripts/build-with-configs.sh configs/lupine-djw-kml.config configs/apps/nginx.config`
+7. Build rootfs:
 `sh image2rootfs.sh app tag ext2`, the tag must be `alpine`, because Lupine use musl libc rather than glibc.
+ Example: `sh image2rootfs.sh nginx alpine ext2`
 
-Run Lupine-Linux:
+## Run Lupine-Linux
+### In Firecraker
 - run `sh firecrackerd.sh` in first shell
-- run `sh firecracker-run.sh path_to_kernel path_to_rootfs init` in second shell, the `init` can be `/bin/sh` or some scripts that you want to run after Lupine bootup.
+- run `sh firecracker-run.sh <path_to_kernel> <path_to_rootfs> init=<init_script>` in second shell, the `init` can be `/bin/sh` or some scripts that you want to run after Lupine boots up.
+
+### In QEMU
+- Make sure to build your kernel with the follwing options turned on:
+    * `CONFIG_PCI=y`  
+    * `CONFIG_VIRTIO_PCI=y`
+- Once built you can run using the following command:
+  `qemu-system-x86_64 -no-reboot -kernel <path_to_kernel>  
+  -drive "file=<path_to_root_fs>,format=raw,if=none,id=hd0" 
+  -nographic -nodefaults -serial stdio
+  -device virtio-blk-pci,id=blk0,drive=hd0,scsi=off
+  -append "panic=-1 console=ttyS0 root=/dev/vda rw loglevel=15 nokaslr init=<init_script>`
 
 ## Files
 ```
