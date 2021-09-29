@@ -51,7 +51,7 @@ as small as 4+MB. We aim to show that it has the following unikernel properties
     * `docker tag a74731248/linuxbuild:latest linuxbuild:latest`
 
 4. Run `make` command in the content `load_entropy` to generate `load_entropy` file
-5. Build the Lupine unikernel of your interest by following *one* of the below steps:
+5. Build the Lupine unikernel of your interest by following ***one*** of the below steps:
     * run `sh scripts/build-kernels.sh`
     * run `sh scripts/build-with-configs.sh configs/<specific_config> <app_config>`  
        For Eg: `sh scripts/build-with-configs.sh configs/lupine-djw-kml.config configs/apps/nginx.config`
