@@ -1,6 +1,12 @@
 
 qemu-test:
-	qemu-system-x86_64 -enable-kvm -no-reboot -kernel linux/arch/x86_64/boot/bzImage -drive "file=./lat_syscall.ext2,format=raw" -nographic -nodefaults -serial stdio -append "panic=-1 console=ttyS0 root=/dev/sda rw loglevel=15 nokaslr init=/bin/ash"
+	qemu-system-x86_64 \
+	-enable-kvm -no-reboot \
+    -kernel linux/arch/x86/boot/bzImage \
+	-nographic -nodefaults -serial stdio \
+    -device virtio-blk-pci,id=blk0,drive=hd0,scsi=off \
+    -drive "file=./lat_syscall.ext2,format=raw,if=none,id=hd0" \
+    -append "panic=-1 console=ttyS0 root=/dev/vda rw loglevel=15 nokaslr init=/bin/sh"
 
 build-env-image:
 	cd docker && \
@@ -10,7 +16,6 @@ setup-osv:
 	git submodule update --init --recursive
 	pushd osv && \
 		sudo ./scripts/setup.py
-
 
 patch-linux:
 	cd linux && \
@@ -129,4 +134,3 @@ ftrace:
 	./scripts/config --enable FUNCTION_GRAPH_TRACER; \
 	./scripts/config --enable FUNCTION_STACK_TRACER; \
 	./scripts/config --enable FUNCTION_DYNAMIC_TRACER;
-

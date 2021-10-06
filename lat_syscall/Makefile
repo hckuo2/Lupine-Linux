@@ -1,13 +1,19 @@
 all: lat_syscall lat_syscall-static
 
-MUSL_DIR=/home/djwillia/musl
-MUSL_INSTALL_DIR=/home/djwillia/musl/stuff/musl
-MUSL_GCC=$(MUSL_INSTALL_DIR)/bin/musl-gcc
+check_env:
+ifndef MUSL_INSTALL_DIR
+	$(error MUSL_INSTALL_DIR is not set. Please set in the shell and execute again)
+endif
+ifndef MUSL_GCC
+	$(error MUSL_GCC is not set. Please set it in the shell and execute again)
+endif
 
 .PHONY: always
-libc.so: always
-	make -C $(MUSL_DIR) install \
-	&& cp $(MUSL_INSTALL_DIR)/lib/libc.so .
+libc.so: check_env always
+ifdef MUSL_DIR
+	make -C $(MUSL_DIR) install
+endif
+	cp $(MUSL_INSTALL_DIR)/lib/libc.so .
 
 lat_syscall-static: libc.so lat_syscall.c Makefile
 	$(MUSL_GCC) -g -o $@ -static lat_syscall.c lib_timing.c
