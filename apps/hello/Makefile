@@ -7,6 +7,7 @@ initramfs-hello.cpio.gz: trusted/hello
 	| gzip -9 > initramfs-hello.cpio.gz
 
 trusted/hello: hello.c
+	mkdir trusted
 	gcc -static hello.c -o trusted/hello
 
 clean:
